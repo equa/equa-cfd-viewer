@@ -18,8 +18,11 @@ host, so no absolute path is given):
   `ghcr.io/equa/equa-cfd-viewer`; it publishes no package. Its `Dockerfile` and
   `.dockerignore` are its own. It is deployed nowhere yet: deployment waits
   for hosted case uploads (adopt-service-archetype D8).
-- **Branches.** `beta` is the default branch and takes every PR; there is no
-  `main` (the frozen `trame` branch stays). cfd-backend's `cfd-viz` image
+- **Branches.** `beta` is the default branch and takes every PR. `main` stays
+  at `3f0b4f1`, before the adoption, and is never pushed to: semantic-release
+  refuses to run without a release branch beside the `beta` prerelease, and a
+  `main` carrying the workflows would cut a stable release when pushed. The
+  frozen `trame` branch stays too. cfd-backend's `cfd-viz` image
   clones a release tag (`VIZ_BRANCH` in its `Containerfile`), and Renovate
   there proposes each newer one, so merging that PR is what ships a release to
   the cockpit.
