@@ -171,7 +171,9 @@ def open_options(page):
 
     The button toggles, and Escape does not always close the popover (on CI it
     stayed open once), so a plain click could close it and detach the control
-    the next line clicks."""
+    the next line clicks. It also fades: right after an Escape it still reads
+    visible while it closes, so let any transition finish before looking."""
+    page.wait_for_timeout(400)
     if not page.locator(ctl("apply-options")).is_visible():
         page.click(ctl("options"))
     page.wait_for_selector(ctl("apply-options"), state="visible")
