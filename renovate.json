@@ -32,6 +32,11 @@
       "allowedVersions": "<10"
     },
     {
+      "matchDepNames": ["python"],
+      "matchManagers": ["dockerfile"],
+      "allowedVersions": "<3.15"
+    },
+    {
       "matchDepNames": ["equa-ci"],
       "enabled": false
     },
