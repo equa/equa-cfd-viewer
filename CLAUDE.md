@@ -26,11 +26,12 @@ host, so no absolute path is given):
   clones a release tag (`VIZ_BRANCH` in its `Containerfile`), and Renovate
   there proposes each newer one, so merging that PR is what ships a release to
   the cockpit.
-- **Devcontainer:** `.devcontainer/cfd-viewer/` (`equa-base-lite` plus
-  Chromium's libraries). The checkout sits beside `equa-ci` and
-  `equa-platform-docs`: the bind mount and the OpenSpec symlinks are relative,
-  and the feed credentials come from `../equa-ci/.env`. Its `FROM` tag follows
-  `ci.yml`'s base image (`doit check_devcontainer_base`).
+- **Devcontainer:** equa-ci's (`equa-base-dev` with Chromium's libraries,
+  the feed credentials from `equa-ci/.env`). The checkout sits beside
+  `equa-ci` and `equa-platform-docs`; the OpenSpec symlinks are relative.
+  The top-level `.devcontainer/devcontainer.json` is the template's and not
+  usable here yet: it has no feed credentials (equa/equa-ci#85) and its
+  pinned `equa-base-dev` predates Chromium.
 - **Documentation and OpenSpec artifacts live in `equa-platform-docs`**, under
   `docs/platform/modules/cfd-viewer/`. This
   repository keeps only `docs/README.md`; `openspec/specs` and
@@ -185,12 +186,12 @@ still to come. What phase 1 left in the code, and what not to undo:
 - **Tooling** is equa-ci's since the adopt (2026-10-24): `dodo.py` calls
   `create_tasks` and adds what no lint or test kind covers -- `web_install`,
   `web_build`, `chromium`, `test_ui`, `wheel_check` (not `package`: the
-  factory owns that name), `requirements_check`, `cockpit_contract`,
-  `check_devcontainer_base`. `test_py` is redefined: the factory passes
-  `-m "not integration"`, and a command-line `-m` replaces one in `addopts`,
-  so `-m 'not browser'` there would not deselect the browser suite. doit's
-  state is the template's `.doit.db`; one written by another Python fails with
-  "old format or corrupted" -- delete it.
+  factory owns that name), `requirements_check`, `cockpit_contract`.
+  `test_py` is redefined: the factory passes `-m "not integration"`, and a
+  command-line `-m` replaces one in `addopts`, so `-m 'not browser'` there
+  would not deselect the browser suite. doit's state is the template's
+  `.doit.db`; one written by another Python fails with "old format or
+  corrupted" -- delete it.
 - **Host and dev container:** a `.venv` or hook installed on one side does not
   work on the other. Note `pre-commit run --commit-msg-filename` does NOT test
   commitlint (the hook lints `.git/COMMIT_EDITMSG`); test it with a real
@@ -240,31 +241,14 @@ it checks shape only and says so (`tests/contract.py`).
 
 ## Environment
 
-The devcontainer (see "Repository-specific notes") is the environment to use.
-Until it is proven, the older `/work` container still works: Ubuntu 24.04,
-Python 3.12, **no root**, no system GL or Chromium libraries, no exposed
-ports; `/work` is the only host bind mount and home is container-local.
+equa-ci's devcontainer (see "Repository-specific notes") is the environment
+to use; `uv run doit ci` passes there with nothing extra installed.
 
-- **Everything extra lives in `/work/.tools`**, so it survives a rebuild:
-  - `node/` -- Node 24 (the system `node` is 18, too old for Vite 8:
-    "`node:util` does not provide an export named `styleText`"). `~/.bashrc`
-    puts it on `PATH`.
-  - `bin/micromamba` + `testenv/` -- Chromium's system libraries and fonts from
-    conda-forge (`nss`, `atk`, `at-spi2`, `dbus`, the X libs, `libxkbcommon`,
-    `alsa-lib`, `libgbm`, `fontconfig`; ~120 MB). **No Mesa**: nothing needs it.
-  - `ms-playwright/` -- `playwright install chromium-headless-shell`.
-  - `cfd-test-env.sh` -- `source` it before the suites: `LD_LIBRARY_PATH`,
-    `FONTCONFIG_FILE` (else Chromium aborts in SkFontMgr),
-    `PLAYWRIGHT_BROWSERS_PATH`, and **unsets `WAYLAND_DISPLAY`** (leaks in
-    from the host and breaks Chromium's SwiftShader, so no WebGL).
 - **The Python env is `uv sync` -> `.venv`.** A venv cannot move: its scripts
   hard-code the interpreter path, and `uv sync` does not rewrite them. "Failed
   to spawn: doit / No such file" means a venv built elsewhere -- `rm -rf .venv
   && uv sync`. The pre-commit hooks record an interpreter path too; they are
   installed from the container, so commits belong on that side.
-- Removing a conda package can take a shared library with it (removing Mesa
-  removed `libgbm`), and a plain reinstall may not restore the symlinks:
-  `micromamba install --force-reinstall`.
 
 ### VTK packaging — checked 2026-08-11, don't re-derive
 
@@ -280,7 +264,8 @@ ports; `/work` is the only host bind mount and home is container-local.
   (`--extra-index-url https://wheels.vtk.org`, which 301s to a GitLab package
   index), frozen at **9.3.1**, wheels only for cp36–cp312 on linux x86_64 and
   win amd64. Python 3.13+/macOS/arm64 cannot resolve it at all.
-- OpenFOAM 13 was at `/opt/cfd/OpenFOAM-13` in the old dev image; the /work container has none (regenerating demo data needs the host or an OpenFOAM image).
+- OpenFOAM 13 was at `/opt/cfd/OpenFOAM-13` in the old dev image; the devcontainer has none (regenerating demo data needs the host or an
+  OpenFOAM image).
 
 ## VTK-Python traps hit here
 
