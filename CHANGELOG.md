@@ -1,3 +1,10 @@
+## [1.0.0-beta.4](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-10-26)
+
+### Bug Fixes
+
+* **deps:** update non-major dependencies ([53b9561](https://github.com/equa/equa-cfd-viewer/commit/53b9561ebbdaa63bf863ab1231df954b68394568))
+* **docker:** hold the Python image at 3.14, vtk has no 3.15 wheels ([7fd4b6b](https://github.com/equa/equa-cfd-viewer/commit/7fd4b6b7112af12916948320d253f466fabbb5b8))
+
 ## [1.0.0-beta.3](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-10-24)
 
 ## [1.0.0-beta.2](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2026-10-24)
