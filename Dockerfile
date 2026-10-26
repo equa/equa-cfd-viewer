@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.10
+# syntax=docker/dockerfile:1.28
 #
 # cfd-viewer's own image: the server in `server` mode, the client inside its
 # wheel. Shaped like the equa-ci service archetype's Dockerfile (web, builder,
@@ -19,7 +19,7 @@
 # (with a warning) unless told to write a Docker-format image. buildx in CI
 # writes Docker format anyway.
 
-ARG PYTHON_IMAGE=python:3.14-slim-trixie
+ARG PYTHON_IMAGE=python:3.15-slim-trixie
 ARG NODE_IMAGE=node:24-slim
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.5
 
