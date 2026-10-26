@@ -27,9 +27,10 @@ state, so they cost **no round trip**; only what has to be re-*extracted* does.
 
 ## Running it
 
-Develop in the devcontainer `.devcontainer/cfd-viewer/`, with this checkout
-beside `equa-ci` (its `.env` holds the `equa-dev` feed credentials that
-`uv sync` needs) and `equa-platform-docs`.
+Develop in **equa-ci's devcontainer**, with this checkout beside `equa-ci`
+and `equa-platform-docs`: it mounts them all under `/workspaces/repos`, has
+Chromium's libraries, and loads the `equa-dev` feed credentials that
+`uv sync` needs from `equa-ci/.env`.
 
 The server is the Python package `equa-cfd-viewer`, managed with
 [uv](https://docs.astral.sh/uv/):
@@ -302,8 +303,8 @@ uv run doit list                   # the separate tasks: lint, test_py, test_ui,
 
 `doit ci` runs ruff, markdownlint and cspell, pytest, the browser suite, the
 client build, a check that the wheel carries the client, a check that
-`requirements.txt` matches the lock, the cockpit contract and the
-devcontainer's base tag. The suites also run directly:
+`requirements.txt` matches the lock and the cockpit contract. The suites
+also run directly:
 
 ```bash
 uv run python tests/test_pipeline.py            # 64 checks, no browser, no GL: the VTK pipeline
