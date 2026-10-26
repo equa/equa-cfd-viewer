@@ -28,6 +28,10 @@
       "automerge": true
     },
     {
+      "matchDepNames": ["conventional-changelog-conventionalcommits"],
+      "allowedVersions": "<10"
+    },
+    {
       "matchDepNames": ["equa-ci"],
       "enabled": false
     },
