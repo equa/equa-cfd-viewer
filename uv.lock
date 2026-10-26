@@ -448,7 +448,7 @@ dev = [
 
 [[package]]
 name = "equa-ci"
-version = "1.0.0b209"
+version = "1.0.0b211"
 source = { registry = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/equa-dev/pypi/simple/" }
 dependencies = [
     { name = "cmake-format" },
@@ -461,7 +461,7 @@ dependencies = [
     { name = "wheel" },
 ]
 wheels = [
-    { url = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/60c16aff-a8fb-47aa-923d-4595ca2f9de2/pypi/download/equa-ci/1b209/equa_ci-1.0.0b209-py3-none-any.whl", hash = "sha256:8ea9e693dc0af5d14e9f3f66d543be9a6a81dd6568d2a1022594cadb3beedb81", size = 178472, upload-time = "2026-10-23T10:13:48Z" },
+    { url = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/60c16aff-a8fb-47aa-923d-4595ca2f9de2/pypi/download/equa-ci/1b211/equa_ci-1.0.0b211-py3-none-any.whl", hash = "sha256:e24cdb11e6e5e7a2e8be3bd6c5ac97d709213d04a0d4330effb4469d2cbf168c", size = 178537, upload-time = "2026-10-24T10:22:04Z" },
 ]
 
 [[package]]
