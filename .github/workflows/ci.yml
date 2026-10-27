@@ -26,7 +26,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # ── Three jobs: checks, image, release ────────────────────────────────────
+  # ── Four jobs: checks, image, windows, release ────────────────────────────
   # Split so that a release is never cut for an image that does not work
   # (design D5). Checks resolves the version and runs the suite; Image builds,
   # pushes and then pulls the image back and proves it answers; only then does
@@ -215,12 +215,103 @@ jobs:
             echo "Pull with \`docker pull ${VERSION_TAG}\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # A frozen cfd-viewer.exe for Windows users, built and smoke-tested on every
+  # push, Renovate branches included: a VTK or PyInstaller update can break the
+  # frozen build without any Linux check noticing. Release waits for it, so no
+  # release exists without a working bundle (openspec local-desktop-viewer, D6).
+  # A repo-owned addition to the template's workflow.
+  windows:
+    name: Windows bundle
+    needs: checks
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # The release version on main and beta, as the image gets it; a push that
+      # cuts no release has none, so it builds as 0.0.0+g<short sha>.
+      - name: Resolve the version
+        id: version
+        shell: bash
+        env:
+          SEMVER: ${{ needs.checks.outputs.semver }}
+        run: echo "version=${SEMVER:-0.0.0+g${GITHUB_SHA::7}}" >> "$GITHUB_OUTPUT"
+
+      - name: Build the client
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      # --no-dev keeps equa-ci, and with it the private feed, out of the bundle.
+      - name: Install the viewer and PyInstaller
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.version.outputs.version }}
+        run: uv sync --frozen --no-dev --group freeze --no-editable --python 3.12
+
+      - name: Freeze
+        run: uv run --no-sync pyinstaller --noconfirm packaging/windows/cfd-viewer.spec
+
+      - name: Sign
+        env:
+          CFD_VIEWER_SIGNING: ${{ vars.CFD_VIEWER_SIGNING }}
+        run: ./packaging/windows/sign.ps1 -Exe dist/cfd-viewer/cfd-viewer.exe
+
+      - name: Zip
+        id: zip
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $zip = "cfd-viewer-$env:VERSION-win64.zip"
+          New-Item -ItemType Directory dist-win | Out-Null
+          Compress-Archive -Path dist/cfd-viewer -DestinationPath "dist-win/$zip"
+          $hash = (Get-FileHash "dist-win/$zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $zip" | Set-Content dist-win/SHA256SUMS -Encoding ascii
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      # Read-only files block overwrites; the smoke test's before/after file
+      # list catches new ones. (An ACL deny also blocks listing the folder.)
+      - name: Read-only cases
+        run: |
+          New-Item -ItemType Directory cases | Out-Null
+          Copy-Item -Recurse data/hotRoom cases/hotRoom
+          Copy-Item -Recurse tests/data/hotRoomPar cases/hotRoomPar
+          attrib +R cases\* /S
+
+      - name: Smoke test
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ZIP: dist-win/${{ steps.zip.outputs.zip }}
+        run: >-
+          uv run --no-sync python tests/check_frozen.py dist/cfd-viewer/cfd-viewer.exe cases
+          --version $env:VERSION --zip $env:ZIP --summary $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload the bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-bundle
+          path: dist-win/
+          retention-days: 14
+
   # Last, so the tag and the GitHub release only exist once an image that works
-  # is in the registry. Plain runner: this job needs node and git, not the
+  # is in the registry, and a Windows bundle that works is ready to attach. Plain runner: this job needs node and git, not the
   # toolchain tiers.
   release:
     name: Release
-    needs: [checks, image]
+    needs: [checks, image, windows]
     if: needs.checks.outputs.has_release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -246,6 +337,13 @@ jobs:
 
       - name: Install Node dependencies
         run: npm ci
+
+      # Attached to the GitHub release through .releaserc.json's assets.
+      - name: Download the Windows bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-bundle
+          path: dist-win
 
       # Tags, changelog and the GitHub release. No package is published: this
       # repo is a service, and its artifact is the image the job above verified.

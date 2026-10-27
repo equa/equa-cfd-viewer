@@ -36,6 +36,10 @@
     [
       "@semantic-release/github",
       {
+        "assets": [
+          { "path": "dist-win/*.zip", "label": "Windows bundle (zip)" },
+          { "path": "dist-win/SHA256SUMS", "label": "SHA256SUMS" }
+        ],
         "successComment": false,
         "failComment": false,
         "failTitle": false,
