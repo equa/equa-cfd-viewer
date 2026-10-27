@@ -9,10 +9,12 @@ on:
     branches: ['**']
   workflow_dispatch:
 
-# Collapse a burst of pushes to the same branch into one live job.
+# Collapse a burst of pushes to the same branch into one live job. On main and
+# beta a newer push waits instead: cancelling there cut a release short between
+# its tag and its publish steps.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref_name != 'main' && github.ref_name != 'beta' }}
 
 permissions:
   contents: write
