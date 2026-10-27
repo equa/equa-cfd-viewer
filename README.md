@@ -61,24 +61,49 @@ The options:
 
 | Option | Variable | Meaning |
 |---|---|---|
-| `--data DIR` | `CASE_ROOTS` | A directory of cases, or one case. Repeat for several roots (in the variable, separate them with `:`). Default `./data` |
+| `--data DIR`, or `DIR` as an argument | `CASE_ROOTS` | A directory of cases, or one case. Repeat for several roots (in the variable, separate them with `:`). Default `./data` in server mode, none in local mode |
 | `--scan-depth N` | `SCAN_DEPTH` | Directory levels below each root to search for cases. Default 4. Cases are found at any level up to it, never inside another case, as cfd-backend finds them (e.g. its test cases in `CFD_HOME/tests/<name>`) |
-| `--host`, `--port` | `PORT` | Default `0.0.0.0`, `5003` |
+| `--host`, `--port` | `PORT` | Server mode: default `0.0.0.0`, `5003`. Local mode: `127.0.0.1` only, on a free port |
 | `--root-path PATH` | `ROOT_PATH` | Also serve under `PATH` (`/viewer`), for a proxy that does not strip it, as equa-deployment's Traefik does. Every route then answers under it *and* at the root; `PATH` redirects to `PATH/`. Default none |
-| `--mode server` | | The only mode so far, and the default: an empty `--data` is not fatal, cases are picked up as they appear. `--server` is an alias |
+| `--mode server` | | The default: an empty `--data` is not fatal, cases are picked up as they appear. `--server` is an alias |
+| `--mode local` | | One user's own machine: listens on `127.0.0.1` only, opens the browser with a one-time token, and the start screen offers "Add folder", recent folders and "Quit viewer". A second launch joins the running one. The Windows bundle starts in this mode |
+| `--no-browser` | | Local mode: print the URL, token included, instead of opening a browser |
 
-An option on the command line wins over its variable. The image sets
+An option on the command line wins over its variable. Local mode reads none of
+the variables. The image sets
 `CASE_ROOTS=/data` and `PORT=5003` and passes no options, so a platform's
 settings take effect.
 
 `python main.py ...` with `pip install -r requirements.txt` still works the old
 way; that is how cfd-backend's `cfd-viz` image runs it (see
 [the cockpit contract](#the-cockpit-contract)). Endpoints for tooling:
-`/health`, and `/api/config` (mode, version).
+`/health`, and `/api/config` (mode, version). Local mode adds `/api/folders`
+(browse and add), `/api/quit` and `/api/instance`, and answers 403 to any
+request without its token or cookie.
 
 `--data DIR` points at either a single case directory or a directory of them; a
 case is anything containing `system/controlDict`. The bundled demo lives in
 `data/hotRoom`.
+
+### On Windows, without installing anything
+
+Each release carries `cfd-viewer-<version>-win64.zip` and its `SHA256SUMS` on
+its GitHub release page. Unzip it anywhere, no admin rights needed, and
+double-click `cfd-viewer.exe`: the viewer opens in your browser, and "Add
+folder" finds your cases. Dropping a folder onto `cfd-viewer.exe` opens it
+directly. Close the console window, or choose "Quit viewer", to stop it.
+
+The bundle is **unsigned** until EQUA's code-signing certificate is set up, so
+Windows SmartScreen warns about it: unsigned zips are for internal testing
+only. Recent folders are kept in `%APPDATA%\equa\cfd-viewer\settings.json`.
+
+CI builds and smoke-tests the bundle on every push (the `windows` job). To build
+it by hand on Windows, after `uv run doit web_build`:
+
+```bash
+uv sync --frozen --no-dev --group freeze --no-editable
+uv run --no-sync pyinstaller --noconfirm packaging/windows/cfd-viewer.spec
+```
 
 ### In a container
 
