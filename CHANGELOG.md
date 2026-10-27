@@ -1,3 +1,15 @@
+## [1.0.0-beta.5](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-10-27)
+
+### Features
+
+* add a local run mode for a user's own machine ([3223dd5](https://github.com/equa/equa-cfd-viewer/commit/3223dd5f880ffbdfd36deb2274d330e50653dc2e))
+* **windows:** build and smoke-test a Windows bundle ([9e64da3](https://github.com/equa/equa-cfd-viewer/commit/9e64da329276d3c221f8c75ae5d8a7ba9e652c97))
+
+### Bug Fixes
+
+* **pipeline:** drop the deprecated VTK threshold call and its pop-up ([fd22f11](https://github.com/equa/equa-cfd-viewer/commit/fd22f115dc8bfcafee9bfce226ba942d21e4a45f))
+* **windows:** compare the bundle version as PEP 440 in the smoke test ([4ecb308](https://github.com/equa/equa-cfd-viewer/commit/4ecb30828836e2acd53dcb484bb9b94f3db221fc))
+
 ## [1.0.0-beta.4](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-10-26)
 
 ### Bug Fixes
