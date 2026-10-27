@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -461,7 +461,7 @@ freeze = [{ name = "pyinstaller", specifier = "==6.22.3" }]
 
 [[package]]
 name = "equa-ci"
-version = "1.0.0b211"
+version = "1.0.0b212"
 source = { registry = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/equa-dev/pypi/simple/" }
 dependencies = [
     { name = "cmake-format" },
@@ -474,7 +474,7 @@ dependencies = [
     { name = "wheel" },
 ]
 wheels = [
-    { url = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/60c16aff-a8fb-47aa-923d-4595ca2f9de2/pypi/download/equa-ci/1b211/equa_ci-1.0.0b211-py3-none-any.whl", hash = "sha256:e24cdb11e6e5e7a2e8be3bd6c5ac97d709213d04a0d4330effb4469d2cbf168c", size = 178537, upload-time = "2026-10-24T10:22:04Z" },
+    { url = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/60c16aff-a8fb-47aa-923d-4595ca2f9de2/pypi/download/equa-ci/1b212/equa_ci-1.0.0b212-py3-none-any.whl", hash = "sha256:d3308bee4b8efc4ab86ab1d5fea132f3b8871c58923ac6d1d1f80e62c633725d", size = 178566, upload-time = "2026-10-27T08:31:04Z" },
 ]
 
 [[package]]
