@@ -103,8 +103,8 @@ What that means in practice:
 every task); its specs are now the baseline in `openspec/specs/`
 (`case-sources`, `start-screen`, `viewer-build`). Phase 1
 turned the cockpit-only viewer into a package that can also stand alone;
-phases 2 (Windows desktop bundle) and 3 (hosted uploads) are separate changes
-still to come. What phase 1 left in the code, and what not to undo:
+phase 2 (Windows desktop bundle) is the local-desktop-viewer change below, and
+phase 3 (hosted uploads) is still to come. What phase 1 left in the code, and what not to undo:
 
 - **Package layout.** `src/equa/cfd_viewer/{foamviz,server}`, installable as
   `equa-cfd-viewer` (`pyproject.toml`, `uv.lock`, console script `cfd-viewer`).
@@ -159,8 +159,8 @@ still to come. What phase 1 left in the code, and what not to undo:
   request for the already-open case skips the directory walk.
 - **Cases are read in place** -- no `.foam` marker is written (see the trap
   below). Read-only shares and `:ro` mounts work.
-- **Run modes.** `--mode server` is the only mode and the default (`--server`
-  is an alias), so an empty `--data` no longer exits.
+- **Run modes.** `--mode server` is the default (`--server` is an alias), so an
+  empty `--data` no longer exits. Phase 2 added `--mode local` (below).
 - **Platform mounting (2026-10-23).** `ROOT_PATH`/`--root-path` registers every
   route twice, under the prefix and at the root (Starlette's `root_path`
   behavior, which the other platform services get for free): Traefik forwards
@@ -196,6 +196,40 @@ still to come. What phase 1 left in the code, and what not to undo:
   work on the other. Note `pre-commit run --commit-msg-filename` does NOT test
   commitlint (the hook lints `.git/COMMIT_EDITMSG`); test it with a real
   commit in a throwaway clone.
+
+## The local-desktop-viewer change, phase 2 (2026-10-27)
+
+The design record is `openspec/changes/local-desktop-viewer/` (archived once
+done). What it left in the code, and what not to undo:
+
+- **`--mode local`** (`server/local.py`): binds `127.0.0.1` on port 0 *before*
+  the server starts (`bind_loopback`, `SO_EXCLUSIVEADDRUSE` on Windows), so the
+  port is known for the URL and the `Host` check. A per-launch token becomes a
+  `cfdv_<port>` `HttpOnly` `SameSite=Strict` cookie; another process uses the
+  `X-Cfd-Viewer-Token` header. Local mode reads no environment variable and
+  has no `data` default. It runs its own `AppRunner` loop so `/api/quit` can
+  stop it.
+- **One instance per user**: `instance.json` under `%LOCALAPPDATA%` (XDG state
+  elsewhere), created with `O_EXCL`. A second launch checks the recorded port
+  with a **nonce challenge** on `/api/instance` (HMAC under the token) and only
+  then sends the token and its folders. Do not "simplify" this to a
+  `/api/config` call with the token: that hands the token to whatever program
+  took the port (an impostor test covers it).
+- **Overlapping roots**: `add_root` ignores a root inside a present one, and a
+  parent's walk skips other roots below it, so ids never change.
+- **The frozen bundle** (`packaging/windows/cfd-viewer.spec`) must collect
+  `vtkmodules.numpy_interface` and `vtkmodules.util`: VTK imports its array
+  overrides from C++, and without them `vtkAffineArray` (the offsets of a
+  fixed-size triangle cell array, VTK 9.7) exposes no buffer and *every* scene
+  fails. `test/broken-bundle` proved the `windows` job catches it.
+- **Windows CI traps**: an `icacls /deny` on the cases blocks *listing* them
+  too, even with only specific write rights; use `attrib +R` plus the smoke
+  test's before/after file list. `decomposePar` (OpenFOAM 13) decomposes only
+  time 0 unless given `-time '0:'`.
+- **Client traps**: the start screen's "stopped" view must come after every
+  hook (an early return before `useMemo` crashed React on Quit); `Text
+  truncate="start"` is right-to-left, so the path sits in a `dir="ltr"` span.
+  yarl here has no `URL.without_query`.
 
 ## Working agreements (Niklas, merged from todo.md 2026-09-09)
 
