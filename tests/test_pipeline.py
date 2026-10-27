@@ -26,6 +26,9 @@ from equa.cfd_viewer.foamviz.case import FoamCase, derive_scalars, find_cases  #
 from equa.cfd_viewer.foamviz.pipeline import COLOR_ARRAY, FoamPipeline  # noqa: E402
 
 CASE = ROOT / "data" / "hotRoom"
+# hotRoom decomposed by decomposePar into 2 subdomains, every time in
+# processor*/ and only 0 in the root (openspec local-desktop-viewer, D7).
+DECOMPOSED = ROOT / "tests" / "data" / "hotRoomPar"
 # From its system/blockMeshDict (the definition, so a check may rely on it):
 # 10 x 5 x 10 cells of 1 m. A z-cut crosses one layer of 10 x 5 cells.
 N_CELLS = 500
@@ -310,6 +313,9 @@ def main():
     print("\nread-only cases (nothing is written into a case)")
     read_only_checks()
 
+    print("\ndecomposed fixture (decomposePar, 2 subdomains)")
+    decomposed_fixture_checks()
+
     print(f"\n{checks - len(failures)}/{checks} checks passed")
     if failures:
         print("failed:", ", ".join(failures))
@@ -383,6 +389,35 @@ def read_only_checks():
                   _tree_state(root) == before,
                   ", ".join(sorted(set(_tree_state(root)) ^ set(before))) or "")
             _set_writable(root, True)  # so the temporary directory can be removed
+
+
+def decomposed_fixture_checks():
+    """A full scene from a read-only copy of a real decomposePar output."""
+    from equa.cfd_viewer.server.scene import SceneSource
+    from equa.cfd_viewer.server.sources import DirectorySource
+
+    with tempfile.TemporaryDirectory(prefix="cfdv-par-") as tmp:
+        root = Path(tmp) / DECOMPOSED.name
+        shutil.copytree(DECOMPOSED, root)
+        _set_writable(root, False)
+        before = _tree_state(root)
+        try:
+            source = SceneSource(DirectorySource([root]))
+            source.open(DECOMPOSED.name)
+            meta = source.meta()
+            check("decomposed fixture is read as decomposed", meta["decomposed"] is True)
+            check("decomposed fixture lists every time",
+                  meta["times"] == [0.0, 700.0, 740.0], f"{meta['times']}")
+            try:
+                blob = source.scene({"field": "U", "component": "magnitude",
+                                     "parts": "boundary,slice,iso,stream,glyph,geometry"})
+                extracted, detail = len(blob) > 100_000, f"{len(blob)} bytes"
+            except Exception as exc:  # a missing processor time breaks the scene
+                extracted, detail = False, f"{type(exc).__name__}: {exc}"
+            check("decomposed fixture extracts a full scene at 740", extracted, detail)
+        finally:
+            check("decomposed fixture is left untouched", _tree_state(root) == before)
+            _set_writable(root, True)
 
 
 if __name__ == "__main__":
