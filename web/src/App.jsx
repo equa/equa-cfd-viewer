@@ -115,6 +115,12 @@ export default function App() {
     setStart({ show: false, notice: null })
   }, [])
 
+  // A folder added in local mode: new cases, and a new recent-folders list.
+  const onFoldersChanged = useCallback(() => {
+    api.config().then(setConfig).catch(() => {})
+    return refreshEntries()
+  }, [refreshEntries])
+
   useEffect(() => {
     api.config().then(setConfig).catch(() => {})
     refreshEntries().then((list) => {
@@ -442,6 +448,7 @@ export default function App() {
           loading={entriesLoading}
           onOpen={openCase}
           onRefresh={refreshEntries}
+          onFoldersChanged={onFoldersChanged}
         />
       )}
     </div>

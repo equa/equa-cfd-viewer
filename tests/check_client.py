@@ -280,6 +280,80 @@ def start_screen_checks(browser, cases, args, out):
             stop_server(single)
 
 
+def start_local(home):
+    """A local-mode viewer whose per-user files live under *home*; its URL."""
+    env = {**os.environ, "HOME": str(home), "XDG_STATE_HOME": str(home / "state"),
+           "XDG_CONFIG_HOME": str(home / "config"),
+           "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT / "src"),
+                                                       os.environ.get("PYTHONPATH")]))}
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "equa.cfd_viewer", "--mode", "local", "--no-browser"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, env=env)
+    return proc, proc.stdout.readline().strip()
+
+
+def local_mode_checks(browser, args, out):
+    """Local mode's start screen (openspec local-desktop-viewer, D3): add a
+    folder, quit, reopen it from the recent folders -- with no meta, range or
+    scene request -- and none of it in server mode."""
+    print("\nlocal mode")
+    page = browser.new_page(viewport={"width": 1300, "height": 800})
+    page.goto(f"http://127.0.0.1:{PORT}/", wait_until="domcontentloaded")
+    page.wait_for_selector(ctl("case-row"), timeout=60_000)
+    check("server mode shows no local controls",
+          sum(page.locator(ctl(c)).count()
+              for c in ("add-folder", "quit-viewer", "recent-folders")) == 0)
+    page.close()
+
+    with tempfile.TemporaryDirectory(prefix="cfdv-home-") as tmp:
+        home = Path(tmp)
+        (home / "cases").symlink_to(Path(args.data).resolve())
+        proc, url = start_local(home)
+        try:
+            page = browser.new_page(viewport={"width": 1300, "height": 800})
+            heavy = []
+            page.on("request", lambda r: heavy.append(r.url)
+                    if any(k in r.url for k in ("api/meta", "api/range", "api/scene")) else None)
+            page.goto(url, wait_until="domcontentloaded")
+            page.wait_for_selector(ctl("case-empty"), timeout=60_000)
+            check("local mode starts with no case and an Add folder button",
+                  page.locator(ctl("add-folder")).count() == 1)
+
+            page.click(ctl("add-folder"))
+            page.locator(ctl("folder-row"), has_text=str(home)).first.click()
+            page.locator(ctl("folder-row"), has_text="cases").first.click()
+            target = str(Path(args.data).resolve())  # the browser resolves the symlink
+            page.wait_for_function(
+                f"document.querySelector('{ctl('folder-path')}').textContent === {target!r}")
+            shot(page, out / "07-folder-browser.png")
+            page.click(ctl("folder-add"))
+            page.wait_for_selector(ctl("case-row"), timeout=60_000)
+            rows = page.locator(ctl("case-row")).count()
+            check("Add folder lists the folder's cases", rows >= 2, f"{rows} rows")
+            check("the folder becomes a recent folder",
+                  page.locator(ctl("recent-folder")).count() == 1)
+
+            page.click(ctl("quit-viewer"))
+            page.wait_for_selector(ctl("viewer-stopped"), timeout=30_000)
+            check("Quit viewer stops the server", proc.wait(timeout=15) == 0)
+            page.close()
+
+            proc, url = start_local(home)
+            page = browser.new_page(viewport={"width": 1300, "height": 800})
+            page.on("request", lambda r: heavy.append(r.url)
+                    if any(k in r.url for k in ("api/meta", "api/range", "api/scene")) else None)
+            page.goto(url, wait_until="domcontentloaded")
+            page.wait_for_selector(ctl("recent-folder"), timeout=60_000)
+            page.click(ctl("recent-folder"))
+            page.wait_for_selector(ctl("case-row"), timeout=60_000)
+            check("a recent folder lists its cases again",
+                  page.locator(ctl("case-row")).count() == rows)
+            check("local controls cost no meta/range/scene request", not heavy, str(heavy[:2]))
+            page.close()
+        finally:
+            stop_server(proc)
+
+
 def slider_drag(page, selector, steps=20, fraction=0.75):
     """Drag a Mantine slider from its centre towards `fraction` of its width.
 
@@ -857,6 +931,7 @@ def main():
             shot(page, out / "05-final.png")
 
             start_screen_checks(browser, cases, args, out)
+            local_mode_checks(browser, args, out)
             browser.close()
     finally:
         stop_server(server)

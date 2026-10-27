@@ -25,10 +25,13 @@ from aiohttp import web
 
 from .. import __version__
 from ..foamviz import colors
+from .local import INSTANCE_PATH, browse
 from .scene import SceneSource
 from .sources import AmbiguousCase, CaseNotFound
 
 log = logging.getLogger("cfdviewer")
+
+STOP = web.AppKey("stop", asyncio.Event)
 
 PACKAGE = Path(__file__).resolve().parent.parent
 # src/equa/cfd_viewer -> the checkout root, when running from a source tree.
@@ -71,12 +74,12 @@ this process:</p>
 </body>"""
 
 
-# What the server can do, per run mode. Phase 1 has only ``server`` (the
-# cockpit's cfd-viz); ``local`` and ``hosted`` add "Add folder" and "Upload
-# case" to the start screen through the same flags (openspec standalone-viewer,
-# design D4).
+# What the server can do, per run mode: ``server`` is the cockpit's cfd-viz and
+# the platform's image, ``local`` a user's own machine (openspec
+# local-desktop-viewer); ``hosted`` will add "Upload case" through the same flags.
 MODES = {
     "server": {"canAddFolders": False, "canUpload": False},
+    "local": {"canAddFolders": True, "canUpload": False},
 }
 
 
@@ -86,7 +89,7 @@ def normalise_root_path(root_path):
     return f"/{root_path}" if root_path else ""
 
 
-def make_app(source, mode="server", root_path=""):
+def make_app(source, mode="server", root_path="", local=None):
     """The aiohttp app over a case source (``sources.DirectorySource``).
 
     *root_path* (``/viewer``) is the path an edge proxy serves this under
@@ -95,9 +98,14 @@ def make_app(source, mode="server", root_path=""):
     ``root_path`` does for the other platform services: the edge sends
     ``/viewer/health``, the image's own HEALTHCHECK asks ``/health``. The
     cockpit's nginx strips ``/viz/`` itself and needs no root path.
+
+    *local* (``local.LocalSession``) is required in ``local`` mode: its guard
+    admits only the launching user's browser.
     """
     if mode not in MODES:
         raise ValueError(f"unknown mode {mode!r}")
+    if (mode == "local") != (local is not None):
+        raise ValueError("local mode needs a LocalSession, and only local mode takes one")
     root_path = normalise_root_path(root_path)
     scene_source = SceneSource(source)
     # The filter graph is shared mutable state; one extraction at a time.
@@ -134,7 +142,10 @@ def make_app(source, mode="server", root_path=""):
     async def config(_request):
         """What this server is and can do; the client's start screen reads it.
         Cheap by design: no case root is scanned and no case is opened."""
-        return web.json_response({"mode": mode, "version": __version__, **MODES[mode]})
+        answer = {"mode": mode, "version": __version__, **MODES[mode]}
+        if local:
+            answer["recentFolders"] = await asyncio.to_thread(local.recent.list)
+        return web.json_response(answer)
 
     async def cases(_request):
         """``cases`` (names) as it always was, plus ``entries`` with the rest."""
@@ -212,25 +223,79 @@ def make_app(source, mode="server", root_path=""):
         raise web.HTTPPermanentRedirect(
             request.rel_url.with_path(root_path + "/").with_query(request.query))
 
-    app = web.Application()
+    async def folders(request):
+        """Local mode's folder browser: drives, then subdirectories (D2)."""
+        try:
+            listing = await asyncio.to_thread(browse, request.query.get("path", ""))
+        except OSError as exc:
+            raise web.HTTPNotFound(text=f"cannot list {request.query.get('path')!r}: {exc}")
+        return web.json_response(listing)
+
+    async def add_folder(request):
+        """Add a folder as a root, and to the recent folders."""
+        try:
+            folder = Path((await request.json())["path"]).resolve()
+        except (ValueError, KeyError, TypeError):
+            raise web.HTTPBadRequest(text='expected {"path": "<folder>"}')
+        if not folder.is_dir():
+            raise web.HTTPNotFound(text=f"no folder {str(folder)!r}")
+        added = source.add_root(folder)
+        await asyncio.to_thread(local.recent.add, folder)
+        return web.json_response({"added": added, "path": str(folder)})
+
+    async def instance(request):
+        """Proof that this is the viewer the instance file names (D1)."""
+        nonce = request.query.get("nonce", "")
+        if not 16 <= len(nonce) <= 128:
+            raise web.HTTPBadRequest(text="nonce: 16 to 128 characters")
+        return web.json_response({"proof": local.proof(nonce)})
+
+    async def quit_(_request):
+        """Stop the server once this answer is out (D3)."""
+        asyncio.get_running_loop().call_later(0.2, app[STOP].set)
+        return web.json_response({"stopping": True})
+
+    app = web.Application(middlewares=[local.guard] if local else [])
+    app[STOP] = asyncio.Event()
     routes = {"/": index, "/health": health, "/api/config": config, "/api/cases": cases,
               "/api/meta": meta, "/api/times": times, "/api/range": field_range,
               "/api/scene": scene, "/api/lut": lut}
+    if local:
+        routes["/api/folders"] = folders
+        routes[INSTANCE_PATH] = instance
     for prefix in dict.fromkeys(["", root_path]):
         for path, handler in routes.items():
             app.router.add_get(prefix + path, handler)
         if (DIST / "assets").is_dir():
             # Vite fingerprints these, so they can be cached forever.
             app.router.add_static(prefix + "/assets/", DIST / "assets")
+    if local:
+        app.router.add_post("/api/folders", add_folder)
+        app.router.add_post("/api/quit", quit_)
     if root_path:
         app.router.add_get(root_path, to_slash)
     app["source"] = scene_source
     return app
 
 
-def serve(source, host="0.0.0.0", port=5003, mode="server", root_path=""):
+def serve(source, host="0.0.0.0", port=5003, mode="server", root_path="",
+          local=None, sock=None):
     root_path = normalise_root_path(root_path)
     log.info("cfd-viewer %s (%s mode) serving %s on http://%s:%d%s/",
              __version__, mode, source.describe(), host, port, root_path)
-    web.run_app(make_app(source, mode=mode, root_path=root_path),
-                host=host, port=port, print=None)
+    app = make_app(source, mode=mode, root_path=root_path, local=local)
+    if sock is not None:  # local mode binds first, to know its port
+        asyncio.run(_serve_until_stopped(app, sock))
+    else:
+        web.run_app(app, host=host, port=port, print=None)
+
+
+async def _serve_until_stopped(app, sock):
+    """Local mode's server loop: until ``/api/quit``, or Ctrl+C."""
+    runner = web.AppRunner(app)
+    await runner.setup()
+    try:
+        await web.SockSite(runner, sock).start()
+        await app[STOP].wait()
+    finally:
+        await runner.cleanup()

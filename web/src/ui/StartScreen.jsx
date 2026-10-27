@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react'
 import {
   Alert, Badge, Button, Group, ScrollArea, Table, Text, TextInput, Title,
 } from '@mantine/core'
-import { IconAlertTriangle, IconRefresh, IconSearch } from '@tabler/icons-react'
+import {
+  IconAlertTriangle, IconFolderPlus, IconHistory, IconPower, IconRefresh, IconSearch,
+} from '@tabler/icons-react'
+import { api } from '../api.js'
+import { FolderBrowser } from './FolderBrowser.jsx'
 
 /*
  * What the viewer shows before a case is open: every case the server can see,
@@ -24,9 +28,22 @@ import { IconAlertTriangle, IconRefresh, IconSearch } from '@tabler/icons-react'
  *
  * Laid out as a header bar plus one list so it maps onto the equa-ui shell
  * (TopBar + a card list) when the client moves to @equa/ui.
+ *
+ * In local mode (config.canAddFolders) it also offers "Add folder", the recent
+ * folders and "Quit viewer"; those call /api/folders and /api/quit only
+ * (openspec local-desktop-viewer, D3).
  */
-export function StartScreen({ entries, config, notice, loading, onOpen, onRefresh }) {
+export function StartScreen({
+  entries, config, notice, loading, onOpen, onRefresh, onFoldersChanged,
+}) {
   const [filter, setFilter] = useState('')
+  const [browsing, setBrowsing] = useState(false)
+  const [stopped, setStopped] = useState(false)
+  const local = !!config?.canAddFolders
+  const recent = config?.recentFolders || []
+
+  const addRecent = (path) => api.addFolder(path).then(onFoldersChanged).catch(() => {})
+  const quit = () => api.quit().then(() => setStopped(true)).catch(() => setStopped(true))
 
   const shown = useMemo(() => {
     const needle = filter.trim().toLowerCase()
@@ -35,6 +52,17 @@ export function StartScreen({ entries, config, notice, loading, onOpen, onRefres
       .some((v) => v && v.toLowerCase().includes(needle)))
   }, [entries, filter])
 
+  if (stopped) {
+    return (
+      <div className="start" data-ctl="start-screen">
+        <div className="start-body" data-ctl="viewer-stopped">
+          <Title order={4}>The viewer has stopped</Title>
+          <Text size="sm" c="dimmed">You can close this tab.</Text>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="start" data-ctl="start-screen">
       <Group className="start-head" gap="xs" wrap="nowrap">
@@ -42,6 +70,13 @@ export function StartScreen({ entries, config, notice, loading, onOpen, onRefres
         <Text size="xs" c="dimmed">
           {config ? `${config.version} · ${config.mode} mode` : ''}
         </Text>
+        {config?.mode === 'local' && (
+          <Button size="xs" variant="subtle" color="gray" ml="auto"
+            leftSection={<IconPower size={14} stroke={1.8} />} onClick={quit}
+            data-ctl="quit-viewer">
+            Quit viewer
+          </Button>
+        )}
       </Group>
 
       <div className="start-body">
@@ -64,6 +99,16 @@ export function StartScreen({ entries, config, notice, loading, onOpen, onRefres
               data-ctl="case-filter"
               w={240}
             />
+            {local && (
+              <Button
+                size="xs"
+                leftSection={<IconFolderPlus size={14} stroke={1.8} />}
+                onClick={() => setBrowsing(true)}
+                data-ctl="add-folder"
+              >
+                Add folder
+              </Button>
+            )}
             <Button
               size="xs"
               variant="light"
@@ -76,6 +121,19 @@ export function StartScreen({ entries, config, notice, loading, onOpen, onRefres
             </Button>
           </Group>
         </Group>
+
+        {local && recent.length > 0 && (
+          <Group gap={6} mb="sm" data-ctl="recent-folders">
+            <IconHistory size={14} stroke={1.8} />
+            <Text size="xs" c="dimmed">Recent:</Text>
+            {recent.map((path) => (
+              <Button key={path} size="compact-xs" variant="default"
+                onClick={() => addRecent(path)} data-ctl="recent-folder" title={path}>
+                {path.split(/[\\/]/).filter(Boolean).pop() || path}
+              </Button>
+            ))}
+          </Group>
+        )}
 
         {notice && (
           <Alert
@@ -91,7 +149,8 @@ export function StartScreen({ entries, config, notice, loading, onOpen, onRefres
 
         {!loading && !entries.length ? (
           <Text size="sm" c="dimmed" data-ctl="case-empty">
-            No case found. A case is a directory containing
+            {local ? 'No case yet: add a folder that holds cases. ' : 'No case found. '}
+            A case is a directory containing
             {' '}<code>system/controlDict</code>; cases written later appear on Refresh.
           </Text>
         ) : (
@@ -135,6 +194,10 @@ export function StartScreen({ entries, config, notice, loading, onOpen, onRefres
           </ScrollArea>
         )}
       </div>
+      {local && (
+        <FolderBrowser opened={browsing} onClose={() => setBrowsing(false)}
+          onAdded={onFoldersChanged} />
+      )}
     </div>
   )
 }

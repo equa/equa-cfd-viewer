@@ -190,8 +190,27 @@ class DirectorySource:
     def describe(self):
         return ", ".join(str(r) for r in self.roots)
 
-    def _walk(self, root):
-        """Case directories under *root*, root first, then sorted, depth-bounded."""
+    def add_root(self, path):
+        """Add *path* as a root while the server runs; False when it adds nothing.
+
+        A root already present, or inside one, is ignored. A parent of a present
+        root is added, and its walk skips that root, so the cases there keep the
+        ids they have under it. The list is replaced, not appended to:
+        ``list()`` runs in a thread without the scene lock (openspec
+        local-desktop-viewer, D2).
+        """
+        new = Path(path).resolve()
+        if any(new == r or new.is_relative_to(r) for r in self._resolved()):
+            return False
+        self.roots = [*self.roots, new]
+        return True
+
+    def _resolved(self):
+        return [r.resolve() for r in self.roots]
+
+    def _walk(self, root, inner=frozenset()):
+        """Case directories under *root*, root first, then sorted, depth-bounded.
+        Directories in *inner* -- other roots inside this one -- are skipped."""
         if not root.is_dir():
             return
         if is_case(root):
@@ -209,7 +228,7 @@ class DirectorySource:
                     _warn_once(parent, exc)
                     continue
                 for child in children:
-                    if _skip(child):
+                    if _skip(child) or (inner and child.resolve() in inner):
                         continue
                     if is_case(child):
                         yield child
@@ -220,8 +239,11 @@ class DirectorySource:
     def _found(self):
         """``(root, directory, relative, id)`` for every case: names only, no I/O
         beyond the directory walk."""
-        for root in self.roots:
-            for directory in self._walk(root):
+        roots = self.roots
+        resolved = [r.resolve() for r in roots]
+        for root, here in zip(roots, resolved):
+            inner = frozenset(r for r in resolved if r != here and r.is_relative_to(here))
+            for directory in self._walk(root, inner):
                 relative = (directory.relative_to(root).as_posix()
                             if directory != root else ".")
                 yield root, directory, relative, case_id(root, relative)

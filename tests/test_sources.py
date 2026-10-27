@@ -314,3 +314,34 @@ def test_open_by_id_and_by_name(tmp_path):
     assert (s1, s2) == (200, 200)
     assert by_id["case"] == "hotRoom" and by_id["caseId"] == ident
     assert by_name["caseId"] == ident and by_name["caseLabel"] == "hotRoom"
+
+
+def test_added_root_is_listed_and_ids_stay(tmp_path):
+    make_case(tmp_path / "a" / "one")
+    make_case(tmp_path / "b" / "two")
+    source = DirectorySource([tmp_path / "a"])
+    before = {r.name: r.id for r in source.list()}
+    assert source.add_root(tmp_path / "b")
+    after = {r.name: r.id for r in source.list()}
+    assert after == {**before, "two": after["two"]}
+
+
+def test_parent_of_a_root_keeps_its_ids(tmp_path):
+    make_case(tmp_path / "a" / "one")
+    make_case(tmp_path / "c" / "three")
+    source = DirectorySource([tmp_path / "a"])
+    before = {r.name: r.id for r in source.list()}
+    assert source.add_root(tmp_path)
+    refs = source.list()
+    assert sorted(r.name for r in refs) == ["one", "three"]
+    assert {r.name: r.id for r in refs}["one"] == before["one"]
+
+
+def test_present_or_nested_root_adds_nothing(tmp_path):
+    make_case(tmp_path / "a" / "one")
+    source = DirectorySource([tmp_path])
+    roots = source.roots
+    assert not source.add_root(tmp_path)
+    assert not source.add_root(tmp_path / "a")
+    assert source.roots is roots
+    assert names(source) == ["one"]

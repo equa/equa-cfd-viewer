@@ -27,7 +27,18 @@ export const api = {
   lut: (name) => fetch(`api/lut?${q({ name })}`)
     .then(ok).then((r) => r.arrayBuffer()).then((b) => new Uint8Array(b)),
   sceneUrl: (params) => `api/scene?${q(params)}`,
+  // Local mode only (/api/config canAddFolders): the server browses its own
+  // disk, since a browser cannot hand it a path (openspec local-desktop-viewer).
+  folders: (path) => fetch(`api/folders?${q({ path })}`).then(json),
+  addFolder: (path) => fetch('api/folders', post({ path })).then(json),
+  quit: () => fetch('api/quit', post({})).then(json),
 }
+
+const post = (body) => ({
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+})
 
 /* An HTTP error with its status, so callers can tell "no such case" (404:
  * show the start screen with the server's reason) from a failed extraction. */
