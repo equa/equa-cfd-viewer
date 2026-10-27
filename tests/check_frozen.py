@@ -136,6 +136,10 @@ def main():
         if proc.poll() is None:
             proc.kill()
         out = proc.communicate()[0] or ""
+    # Windows writes "Warning: In <file>", Linux VTK's logger "WARN|".
+    vtk_warnings = [line for line in out.splitlines()
+                    if "Warning: In" in line or "WARN|" in line]
+    check("no VTK warnings", not vtk_warnings, "; ".join(vtk_warnings[:3]))
 
     table = ["| Check | Result | Detail |", "|---|---|---|"]
     table += [f"| {n} | {r} | {d} |" for n, r, d in rows]

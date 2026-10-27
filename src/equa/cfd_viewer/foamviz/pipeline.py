@@ -24,6 +24,9 @@ from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 from . import colors
 from .case import derive_scalars
 
+# On Windows VTK shows warnings in a pop-up window; the console is where they belong.
+vtk.vtkOutputWindow.GetInstance().SetDisplayModeToAlwaysStdErr()
+
 COLOR_ARRAY = "FoamVizColor"
 # The array the isosurface contours, when it has been LOCKED to a field other
 # than the colour field. Kept separate from COLOR_ARRAY so an isosurface of one
@@ -235,7 +238,8 @@ class FoamPipeline:
         self.glyph_grid.SetInputArrayToProcess(
             0, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, "vtkValidPointMask"
         )
-        self.glyph_grid.ThresholdByUpper(1.0)
+        self.glyph_grid.SetUpperThreshold(1.0)
+        self.glyph_grid.SetThresholdFunction(vtk.vtkThresholdPoints.THRESHOLD_UPPER)
 
         self.glyph_seeds = vtk.vtkMaskPoints()
         self.glyph_seeds.RandomModeOn()
