@@ -32,13 +32,17 @@ def snapshot(root):
     return {p.relative_to(root).as_posix() for p in root.rglob("*")}
 
 
-def expected_version(raw):
-    """The PEP 440 form the package reports (``1.0.0b5`` for ``1.0.0-beta.5``)."""
+def same_version(reported, wanted):
+    """Equal as PEP 440 versions: hatch-vcs keeps ``1.0.0-beta.5`` as given,
+    a normalizing build would report ``1.0.0b5``."""
     try:
-        from packaging.version import Version
+        from packaging.version import InvalidVersion, Version
     except ImportError:
-        return raw
-    return str(Version(raw))
+        return reported == wanted
+    try:
+        return Version(reported) == Version(wanted)
+    except (InvalidVersion, TypeError):
+        return False
 
 
 def main():
@@ -106,9 +110,8 @@ def main():
         status, body = get(jar, "/api/config")
         config = json.loads(body) if status == 200 else {}
         if args.version:
-            want = expected_version(args.version)
-            check("reports its version", config.get("version") == want,
-                  f"{config.get('version')} (expected {want})")
+            check("reports its version", same_version(config.get("version"), args.version),
+                  f"{config.get('version')} (expected {args.version})")
         check("runs in local mode", config.get("mode") == "local", str(config.get("mode")))
 
         status, body = get(jar, "/api/cases")
