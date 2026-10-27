@@ -39,6 +39,12 @@ dev = [
     "playwright>=1.45",
     "pillow>=10",
 ]
+# The Windows bundle's freezer, pinned so Renovate proposes its updates and the
+# windows CI job tests them before they merge (openspec local-desktop-viewer, D4).
+# Not in the default sync: only that job installs it.
+freeze = [
+    "pyinstaller==6.22.3",
+]
 
 [tool.hatch.version]
 source = "vcs"
