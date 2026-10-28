@@ -1,7 +1,7 @@
 import { Accordion, ActionIcon, Divider, Group, Select, Text, Tooltip } from '@mantine/core'
 import {
   IconArrowUpRight, IconBlur, IconBulb, IconCube, IconEye, IconEyeOff,
-  IconHome, IconSquare, IconVector,
+  IconHome, IconLayoutList, IconSquare, IconVector,
 } from '@tabler/icons-react'
 import { TOOLS, TOOL_PART } from '../scene/state.js'
 import { Head, LabelledSlider, SELECT } from './controls.jsx'
@@ -43,7 +43,7 @@ const BUILDERS = {
 }
 
 export function SidePane({
-  meta, entries, onOpenCase, request, setRequest, appearance, setAppearance, setStyle, plane,
+  meta, entries, onOpenCase, onShowCases, request, setRequest, appearance, setAppearance, setStyle, plane,
   comets, setComets, canAnimate, tubes, setTubes, domain,
 }) {
   const active = appearance.activeTool || 'cutplane'
@@ -55,22 +55,32 @@ export function SidePane({
     <div className="sidepane">
       {/* The same entries as the start screen, opened by id: two cases may
           share a directory name. Until the list arrives, the open case alone. */}
-      <Select
-        {...SELECT}
-        data={caseOptions(entries, meta, request.case)}
-        value={request.case || null}
-        onChange={(v) => v && v !== request.case && onOpenCase(v)}
-        renderOption={({ option }) => (
-          <div>
-            <Text size="xs">{option.label}</Text>
-            {option.detail && <Text size="xs" c="dimmed">{option.detail}</Text>}
-          </div>
-        )}
-        searchable={entries.length > 8}
-        allowDeselect={false}
-        mb={4}
-        data-ctl="case"
-      />
+      <Group gap={4} wrap="nowrap" mb={4}>
+        <Select
+          {...SELECT}
+          style={{ flex: 1 }}
+          data={caseOptions(entries, meta, request.case)}
+          value={request.case || null}
+          onChange={(v) => v && v !== request.case && onOpenCase(v)}
+          renderOption={({ option }) => (
+            <div>
+              <Text size="xs">{option.label}</Text>
+              {option.detail && <Text size="xs" c="dimmed">{option.detail}</Text>}
+            </div>
+          )}
+          searchable={entries.length > 8}
+          allowDeselect={false}
+          data-ctl="case"
+        />
+        {/* The start screen over the open case: the cache button and, in local
+            mode, "Add folder" live there (openspec ice-project-zips, D10). */}
+        <Tooltip label="All cases">
+          <ActionIcon variant="subtle" color="gray" aria-label="All cases"
+            onClick={onShowCases} data-ctl="all-cases">
+            <IconLayoutList size={16} stroke={1.8} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
       <Text size="xs" c="dimmed" mb="sm">
         {meta
           ? `${meta.cells.toLocaleString()} cells · ${meta.times.length} time step${meta.times.length === 1 ? '' : 's'}`

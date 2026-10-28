@@ -25,6 +25,7 @@ from aiohttp import web
 
 from .. import __version__
 from ..foamviz import colors
+from .cache import NoSpace, UnsafeArchive
 from .local import INSTANCE_PATH, browse
 from .scene import SceneSource
 from .sources import AmbiguousCase, CaseNotFound
@@ -108,6 +109,9 @@ def make_app(source, mode="server", root_path="", local=None):
         raise ValueError("local mode needs a LocalSession, and only local mode takes one")
     root_path = normalise_root_path(root_path)
     scene_source = SceneSource(source)
+    cache = getattr(source, "cache", None)
+    if cache is not None:
+        cache.prune()  # start-up; a viewer left running prunes before each unpack
     # The filter graph is shared mutable state; one extraction at a time.
     lock = asyncio.Lock()
 
@@ -134,6 +138,10 @@ def make_app(source, mode="server", root_path="", local=None):
                      f"{', '.join(exc.args[1])}")
         except CaseNotFound:
             raise web.HTTPNotFound(text=f"no case {key!r}")
+        except UnsafeArchive as exc:
+            raise web.HTTPUnprocessableEntity(text=str(exc))
+        except NoSpace as exc:
+            raise web.HTTPInsufficientStorage(text=str(exc))
 
     async def health(_request):
         """Up and accepting requests. Touches no case root, opens no case."""
@@ -142,7 +150,8 @@ def make_app(source, mode="server", root_path="", local=None):
     async def config(_request):
         """What this server is and can do; the client's start screen reads it.
         Cheap by design: no case root is scanned and no case is opened."""
-        answer = {"mode": mode, "version": __version__, **MODES[mode]}
+        answer = {"mode": mode, "version": __version__, **MODES[mode],
+                  "cacheBytes": await asyncio.to_thread(cache.size) if cache else 0}
         if local:
             answer["recentFolders"] = await asyncio.to_thread(local.recent.list)
         return web.json_response(answer)
@@ -243,6 +252,14 @@ def make_app(source, mode="server", root_path="", local=None):
         await asyncio.to_thread(local.recent.add, folder)
         return web.json_response({"added": added, "path": str(folder)})
 
+    async def clear_cache(_request):
+        """Delete every unpacked zip but the open case's (D6). Under the scene
+        lock, so it cannot race an unpack or an open."""
+        if cache is None:
+            return web.json_response({"freed": 0, "failed": []})
+        return web.json_response(await in_thread(
+            lambda: cache.clear(keep=scene_source.cache_entries())))
+
     async def instance(request):
         """Proof that this is the viewer the instance file names (D1)."""
         nonce = request.query.get("nonce", "")
@@ -266,6 +283,7 @@ def make_app(source, mode="server", root_path="", local=None):
     for prefix in dict.fromkeys(["", root_path]):
         for path, handler in routes.items():
             app.router.add_get(prefix + path, handler)
+        app.router.add_post(prefix + "/api/cache/clear", clear_cache)
         if (DIST / "assets").is_dir():
             # Vite fingerprints these, so they can be cached forever.
             app.router.add_static(prefix + "/assets/", DIST / "assets")

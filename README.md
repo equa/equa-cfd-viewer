@@ -85,6 +85,21 @@ request without its token or cookie.
 case is anything containing `system/controlDict`. The bundled demo lives in
 `data/hotRoom`.
 
+### Opening an IDA ICE project
+
+IDA ICE saves each CFD case of a project as `<project>/cfd/<case-id>.zip`. Add
+the project folder, or a folder of projects, and its solved cases are listed
+under their IDA ICE names; cases never run are left out. Nothing is unzipped to
+list them. The first time a case is opened, its zip is unpacked into a per-user
+cache (`%LOCALAPPDATA%\equa\cfd-viewer\cases` on Windows,
+`$XDG_CACHE_HOME/equa/cfd-viewer/cases` elsewhere), and reopening it reuses that
+copy until IDA ICE saves the zip again. Nothing is written into the project.
+
+The cache keeps an unpacked case for 48 hours after it was last opened. "Clear
+case cache" on the start screen empties it at once, except the open case; with
+a case open, "All cases" (beside the case switcher) brings the start screen
+back.
+
 ### On Windows, without installing anything
 
 Each release carries `cfd-viewer-<version>-win64.zip` and its `SHA256SUMS` on

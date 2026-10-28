@@ -52,7 +52,7 @@ def test_config_in_server_mode():
     status, body, case = _get("/api/config")
     assert status == 200 and case is None
     assert body == {"mode": "server", "version": __version__,
-                    "canAddFolders": False, "canUpload": False}
+                    "canAddFolders": False, "canUpload": False, "cacheBytes": 0}
 
 
 def test_unknown_mode_is_refused():

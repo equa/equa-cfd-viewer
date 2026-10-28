@@ -231,6 +231,34 @@ done). What it left in the code, and what not to undo:
   truncate="start"` is right-to-left, so the path sits in a `dir="ltr"` span.
   yarl here has no `URL.without_query`.
 
+## The ice-project-zips change (2026-10-28)
+
+The design record is `openspec/changes/ice-project-zips/`. What it left:
+
+- **Zipped cases** (`server/sources.py`): `_walk` lists `*.zip` in every `cfd`
+  directory it meets, when the zip holds `system/controlDict`. The `cfd` level
+  is free: at the last level a `<dir>/cfd` is stat'ed, not listed, so it is
+  case-insensitive there only where the filesystem is. `_found` carries the
+  case *name* (zip stem) beside the path; `names()` and `resolve()` use it, not
+  `path.name`. A zipped `CaseRef` has `archive` set and `directory` = its cache
+  entry, which need not exist until opened.
+- **The case cache** (`server/cache.py`, `CaseCache`): entry key = path, size
+  and `mtime_ns` of the zip, so a re-saved zip never reads a stale unpack;
+  `SceneSource.is_open` re-checks that key. `ensure()` runs *before* the old
+  case is released, so a failed unpack (422 `UnsafeArchive`, 507 `NoSpace`)
+  leaves it open. `.cfd-viewer.json` in each entry is the only record of size
+  and last use; `cacheBytes` sums it, never walks.
+- **The 10-minute grace protects only another viewer's entries** (the `viewer`
+  id in `.cfd-viewer.json`). Changed during apply: protecting every recent
+  entry made "Clear case cache" free nothing right after browsing.
+- **`meta.case` and the scene header name the case** (`ref.name`), not
+  `FoamCase.name`: for a zip that is the cache entry's hex name.
+- **`server/paths.py`** holds `user_dir`; `cache.py` importing `local.py` would
+  close an import cycle through `sources.py`.
+- **Tests never touch your cache**: `tests/conftest.py` points
+  `XDG_CACHE_HOME` at a temp dir; zips are built from the committed fixtures
+  by `tests/zipcases.py`, and `check_frozen.py` unpacks one on Windows.
+
 ## Working agreements (Niklas, merged from todo.md 2026-09-09)
 
 Standing instructions for how to work in this repo, not one-off requests.
@@ -801,12 +829,12 @@ each other the wrong geometry. Still **one case per process**, as in Trame.
 
 `uv run doit ci` runs everything below (about 3 min); each also runs directly.
 
-| | what it covers | last run (2026-10-24, adopt branch) |
+| | what it covers | last run (2026-10-28, ice-project-zips branch) |
 |---|---|---|
-| `tests/test_pipeline.py` | the VTK pipeline incl. read-only serial/decomposed cases, no browser, no GL | **64/64** |
-| `tests/check_client.py` | the three.js client in real Chromium, incl. the start screen | **115/115** |
+| `tests/test_pipeline.py` | the VTK pipeline incl. read-only serial/decomposed cases, no browser, no GL | **68/68** |
+| `tests/check_client.py` | the three.js client in real Chromium, incl. the start screen and zipped cases | **130/130** |
 | `tests/test_contract.py` | 56 recorded HTTP exchanges replayed (the API only grows) | **56/56** |
-| `tests/test_sources.py`, `test_endpoints.py` | discovery, ids, labels, 404s; `/health`, `/api/config` | pytest **41** |
+| `tests/test_sources.py`, `test_endpoints.py`, `test_cache.py` | discovery incl. zips, ids, labels, 404s; `/health`, `/api/config`; the case cache | pytest **82** |
 | `tests/check_cockpit_contract.py` | cfd-backend's cfd-viz build + runtime, mirrored | **22/22** (21 without `../cfd-backend`) |
 | `tests/bench.py` | per-part extraction sizes and timings (not pass/fail) | — |
 

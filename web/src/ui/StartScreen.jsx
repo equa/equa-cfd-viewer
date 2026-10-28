@@ -3,7 +3,8 @@ import {
   Alert, Badge, Button, Group, ScrollArea, Table, Text, TextInput, Title,
 } from '@mantine/core'
 import {
-  IconAlertTriangle, IconFolderPlus, IconHistory, IconPower, IconRefresh, IconSearch,
+  IconAlertTriangle, IconArrowLeft, IconFolderPlus, IconHistory, IconPower, IconRefresh,
+  IconSearch, IconTrash,
 } from '@tabler/icons-react'
 import { api } from '../api.js'
 import { FolderBrowser } from './FolderBrowser.jsx'
@@ -32,9 +33,13 @@ import { FolderBrowser } from './FolderBrowser.jsx'
  * In local mode (config.canAddFolders) it also offers "Add folder", the recent
  * folders and "Quit viewer"; those call /api/folders and /api/quit only
  * (openspec local-desktop-viewer, D3).
+ *
+ * "All cases" shows it over an open case, which `onClose` returns to; "Clear
+ * case cache" shows in any mode while unpacked zips take space (openspec
+ * ice-project-zips, D6, D10).
  */
 export function StartScreen({
-  entries, config, notice, loading, onOpen, onRefresh, onFoldersChanged,
+  entries, config, notice, loading, onOpen, onRefresh, onFoldersChanged, onCacheCleared, onClose,
 }) {
   const [filter, setFilter] = useState('')
   const [browsing, setBrowsing] = useState(false)
@@ -44,6 +49,8 @@ export function StartScreen({
 
   const addRecent = (path) => api.addFolder(path).then(onFoldersChanged).catch(() => {})
   const quit = () => api.quit().then(() => setStopped(true)).catch(() => setStopped(true))
+  const cacheBytes = config?.cacheBytes || 0
+  const clearCache = () => api.clearCache().finally(onCacheCleared)
 
   const shown = useMemo(() => {
     const needle = filter.trim().toLowerCase()
@@ -70,13 +77,30 @@ export function StartScreen({
         <Text size="xs" c="dimmed">
           {config ? `${config.version} · ${config.mode} mode` : ''}
         </Text>
-        {config?.mode === 'local' && (
-          <Button size="xs" variant="subtle" color="gray" ml="auto"
-            leftSection={<IconPower size={14} stroke={1.8} />} onClick={quit}
-            data-ctl="quit-viewer">
-            Quit viewer
-          </Button>
-        )}
+        <Group gap="xs" ml="auto" wrap="nowrap">
+          {cacheBytes > 0 && (
+            <Button size="xs" variant="subtle" color="gray"
+              leftSection={<IconTrash size={14} stroke={1.8} />} onClick={clearCache}
+              title="Delete the unpacked case zips, except the open case"
+              data-ctl="clear-cache">
+              Clear case cache ({formatBytes(cacheBytes)})
+            </Button>
+          )}
+          {onClose && (
+            <Button size="xs" variant="subtle" color="gray"
+              leftSection={<IconArrowLeft size={14} stroke={1.8} />} onClick={onClose}
+              data-ctl="back-to-case">
+              Back to case
+            </Button>
+          )}
+          {config?.mode === 'local' && (
+            <Button size="xs" variant="subtle" color="gray"
+              leftSection={<IconPower size={14} stroke={1.8} />} onClick={quit}
+              data-ctl="quit-viewer">
+              Quit viewer
+            </Button>
+          )}
+        </Group>
       </Group>
 
       <div className="start-body">
@@ -151,7 +175,8 @@ export function StartScreen({
           <Text size="sm" c="dimmed" data-ctl="case-empty">
             {local ? 'No case yet: add a folder that holds cases. ' : 'No case found. '}
             A case is a directory containing
-            {' '}<code>system/controlDict</code>; cases written later appear on Refresh.
+            {' '}<code>system/controlDict</code>, or a case zip in an IDA ICE
+            project&apos;s <code>cfd</code> folder; cases written later appear on Refresh.
           </Text>
         ) : (
           <ScrollArea className="start-list" type="auto">
@@ -200,4 +225,10 @@ export function StartScreen({
       )}
     </div>
   )
+}
+
+function formatBytes(bytes) {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
+  if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} MB`
+  return `${Math.max(1, Math.round(bytes / 1e3))} kB`
 }

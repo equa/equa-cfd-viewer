@@ -148,8 +148,20 @@ class SceneSource:
         A name only counts while the open case still exists, and it was
         unambiguous when the case was opened."""
         ref = self.ref
-        return (ref is not None and key in (ref.id, ref.name)
-                and ref.directory.is_dir())
+        if ref is None or key not in (ref.id, ref.name) or not ref.directory.is_dir():
+            return False
+        if ref.archive is None:
+            return True
+        # A zip IDA ICE saved again maps to a new entry: unpack that (D3).
+        try:
+            return self.source.cache.entry_for(ref.archive) == ref.directory
+        except OSError:
+            return False
+
+    def cache_entries(self):
+        """The open case's cache entry, which prune and clear must keep."""
+        ref = self.ref
+        return {ref.directory} if ref is not None and ref.archive is not None else set()
 
     def open(self, key):
         """Open the case *key* denotes, or keep it if it is already open.
@@ -159,6 +171,9 @@ class SceneSource:
         if self.is_open(key):
             return self.case
         ref = self.source.resolve(key)
+        if ref.archive is not None:
+            # Before the old case goes, so a failed unpack leaves it open (D3).
+            self.source.cache.ensure(ref.archive, ref.directory, keep=self.cache_entries())
         # Same ordering as FoamViz.load_case: let the old case go before the new
         # one is read, or peak RSS is both cases at once (see CLAUDE.md
         # "Memory management").
@@ -177,7 +192,9 @@ class SceneSource:
         c, p = self.case, self.pipeline
         b = list(c.bounds())
         return {
-            "case": c.name,
+            # The case name, not the folder VTK reads: a zipped case's is its
+            # cache entry (openspec ice-project-zips, D2).
+            "case": self.ref.name,
             # Added by the standalone-viewer change; the API only grows, so the
             # two fields above keep their meaning (a name, the list of names).
             "caseId": self.ref.id,
@@ -311,7 +328,7 @@ class SceneSource:
                 parts.append(part)
 
         meta = {
-            "case": case.name,
+            "case": self.ref.name,
             "time": case.times[idx],
             "timeIndex": idx,
             "times": case.times,

@@ -32,6 +32,9 @@ export const api = {
   folders: (path) => fetch(`api/folders?${q({ path })}`).then(json),
   addFolder: (path) => fetch('api/folders', post({ path })).then(json),
   quit: () => fetch('api/quit', post({})).then(json),
+  // Every mode: deletes the unpacked zips but the open case's; answers
+  // {freed, failed} (openspec ice-project-zips, D6).
+  clearCache: () => fetch('api/cache/clear', post({})).then(json),
 }
 
 const post = (body) => ({

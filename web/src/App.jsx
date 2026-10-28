@@ -115,6 +115,17 @@ export default function App() {
     setStart({ show: false, notice: null })
   }, [])
 
+  // "All cases" in the side pane: the start screen over the open case, which
+  // stays open (openspec ice-project-zips, D10).
+  const showCases = useCallback(() => {
+    refreshEntries()
+    setStart({ show: true, notice: null })
+  }, [refreshEntries])
+
+  // Each time the start screen shows, so the cache size is current (D6).
+  const refreshConfig = useCallback(() => api.config().then(setConfig).catch(() => {}), [])
+  useEffect(() => { if (start.show) refreshConfig() }, [start.show, refreshConfig])
+
   // A folder added in local mode: new cases, and a new recent-folders list.
   const onFoldersChanged = useCallback(() => {
     api.config().then(setConfig).catch(() => {})
@@ -145,8 +156,9 @@ export default function App() {
       setRequestState((r) => (r && r.case === (m.caseId ?? m.case) ? r : initialRequest(m)))
     }).catch((e) => {
       if (cancelled) return
-      if (e instanceof ApiError && e.status === 404) {
-        // A stale bookmark or a deleted case: say so, and offer the others.
+      if (e instanceof ApiError && [404, 422, 507].includes(e.status)) {
+        // A stale bookmark, a deleted case, or a zip that cannot be unpacked:
+        // say so, and offer the others.
         const reason = e.message.startsWith('no case') ? 'not found' : e.message
         setStart({ show: true, notice: `Case “${caseKey}”: ${reason}.` })
         refreshEntries()
@@ -409,6 +421,7 @@ export default function App() {
           meta={meta}
           entries={entries}
           onOpenCase={openCase}
+          onShowCases={showCases}
           request={req}
           setRequest={setRequest}
           appearance={appearance}
@@ -449,6 +462,8 @@ export default function App() {
           onOpen={openCase}
           onRefresh={refreshEntries}
           onFoldersChanged={onFoldersChanged}
+          onCacheCleared={refreshConfig}
+          onClose={meta && !start.notice ? () => setStart({ show: false, notice: null }) : null}
         />
       )}
     </div>

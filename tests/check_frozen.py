@@ -7,7 +7,10 @@
 Starts the executable in local mode on a cases root, as a user would with a
 folder dropped onto it, and checks what the bundle must do: the token flow, the
 client, the case list, a full scene of every case, the version it reports, that
-nothing is written into the cases, and that Quit stops it. The zip size and the
+nothing is written into the cases, and that Quit stops it. A zipped IDA ICE
+project made from the decomposed case is added as a second root, so unpacking
+into the case cache is covered on Windows (openspec ice-project-zips, D9). The
+zip size and the
 time from launch to first page go into the summary. Runs against an unfrozen
 ``cfd-viewer`` too, which is how it is tried on Linux.
 """
@@ -24,6 +27,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
+
+from zipcases import zip_tree
 
 EVERY = "boundary,slice,iso,stream,glyph,geometry"
 
@@ -67,10 +72,14 @@ def main():
     home = Path(tempfile.mkdtemp(prefix="cfdv-frozen-"))
     env = {**os.environ, "LOCALAPPDATA": str(home / "local"), "APPDATA": str(home / "roaming"),
            "XDG_STATE_HOME": str(home / "state"), "XDG_CONFIG_HOME": str(home / "config")}
-    before = snapshot(args.root)
+    zipped = home / "projects"
+    source = next((p for p in sorted(args.root.iterdir()) if p.name == "hotRoomPar"),
+                  sorted(args.root.iterdir())[0])
+    zip_tree(source, zipped / "office" / "cfd" / "zipped-case.zip", {"NAME": "zipped"})
+    before, before_zipped = snapshot(args.root), snapshot(zipped)
     t0 = time.monotonic()
     proc = subprocess.Popen(
-        [str(args.exe), "--mode", "local", "--no-browser", str(args.root)],
+        [str(args.exe), "--mode", "local", "--no-browser", str(args.root), str(zipped)],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
     out = ""
     try:
@@ -116,7 +125,8 @@ def main():
 
         status, body = get(jar, "/api/cases")
         names = json.loads(body)["cases"] if status == 200 else []
-        check("lists the cases", len(names) >= 2, ", ".join(names) or f"{status}")
+        check("lists the cases", len(names) >= 3, ", ".join(names) or f"{status}")
+        check("lists the zipped case", "zipped-case" in names)
         for name in names:
             status, body = get(jar, f"/api/meta?case={name}")
             meta = json.loads(body) if status == 200 else {}
@@ -128,12 +138,17 @@ def main():
             check(f"{name}: full scene", status == 200 and len(body) > 100_000,
                   f"{len(body) / 1e6:.2f} MB in {time.monotonic() - t:.1f} s")
 
+        status, body = get(jar, "/api/config")
+        cached = json.loads(body).get("cacheBytes", 0) if status == 200 else 0
+        check("unpacks the zip into the case cache", cached > 0, f"{cached / 1e6:.1f} MB")
+
         request = urllib.request.Request(base + "/api/quit", data=b"{}", method="POST",
                                          headers={"Content-Type": "application/json"})
         with jar.open(request, timeout=30) as r:
             quit_ok = r.status == 200
         check("Quit stops it", quit_ok and proc.wait(timeout=30) == 0)
         written = sorted(snapshot(args.root) - before)
+        written += sorted(snapshot(zipped) - before_zipped)
         check("writes nothing into the cases", not written, ", ".join(written[:5]))
     finally:
         if proc.poll() is None:

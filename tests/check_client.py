@@ -29,6 +29,7 @@ from urllib.parse import parse_qs, urlparse
 
 from PIL import Image
 from playwright.sync_api import sync_playwright
+from zipcases import project, unsafe
 
 ROOT = Path(__file__).resolve().parent.parent
 PORT = 8191
@@ -179,12 +180,12 @@ def open_options(page):
     page.wait_for_selector(ctl("apply-options"), state="visible")
 
 
-def start_server(data, port):
+def start_server(data, port, **extra_env):
     """The package entry point, from the checkout's src/ when not installed.
 
     (The contract tests drive main.py instead: that is the command line
     cfd-backend's image runs.)"""
-    env = {**os.environ,
+    env = {**os.environ, **extra_env,
            "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT / "src"),
                                                        os.environ.get("PYTHONPATH")]))}
     return subprocess.Popen(
@@ -389,6 +390,74 @@ def orbit(page):
 def parts_of(url):
     """The `parts=` list of a scene request -- what the server was asked to build."""
     return set(parse_qs(urlparse(url).query).get("parts", [""])[0].split(",")) - {""}
+
+
+def zip_checks(browser, out):
+    """Zipped IDA ICE cases, "All cases" and "Clear case cache" (openspec
+    ice-project-zips, D6, D10), on a server of its own over a built project."""
+    print("\nzipped cases")
+    port = PORT + 2
+    with tempfile.TemporaryDirectory(prefix="cfdv-zips-") as tmp:
+        base = Path(tmp)
+        project(base / "projects")
+        unsafe(base / "projects" / "office" / "cfd" / "55555555-eeee.zip")
+        proc = start_server(base / "projects", port, XDG_CACHE_HOME=str(base / "cache"))
+        try:
+            wait_for_server(port, proc)
+            page = browser.new_page(viewport={"width": 1300, "height": 800})
+            page.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+            page.wait_for_selector(ctl("case-row"), timeout=60_000)
+            labels = page.locator(ctl("case-row")).all_inner_texts()
+            check("a project folder lists its solved zips",
+                  len(labels) == 3 and any("case-1" in t for t in labels)
+                  and not any("case-3" in t for t in labels), str(labels))
+            check("an empty cache shows no Clear case cache",
+                  page.locator(ctl("clear-cache")).count() == 0)
+
+            page.locator(ctl("case-row"), has_text="evil").first.click()
+            page.wait_for_selector(ctl("case-notice"), timeout=30_000)
+            check("an unsafe zip returns to the start screen with the reason",
+                  "evil.txt" in page.inner_text(ctl("case-notice")),
+                  page.inner_text(ctl("case-notice")))
+
+            page.locator(ctl("case-row"), has_text="case-2").first.click()
+            page.wait_for_selector(ctl("start-screen"), state="detached", timeout=60_000)
+            colours, _ = wait_for_render(page)
+            check("a decomposed zip opens", colours >= 40, f"{colours} colours")
+
+            heavy = []
+            page.on("request", lambda r: heavy.append(r.url)
+                    if any(k in r.url for k in ("api/meta", "api/range", "api/scene")) else None)
+            page.click(ctl("all-cases"))
+            page.wait_for_selector(ctl("clear-cache"), timeout=30_000)
+            check("All cases shows the start screen with the cache size",
+                  "Clear case cache" in page.inner_text(ctl("clear-cache")))
+            shot(page, out / "08-all-cases.png")
+            page.click(ctl("back-to-case"))
+            page.wait_for_selector(ctl("start-screen"), state="detached", timeout=30_000)
+            check("Back to case returns to the open case unchanged",
+                  gl_colours(page) >= 40 and not heavy, str(heavy[:2]))
+
+            page.click(ctl("all-cases"))
+            page.locator(ctl("case-row"), has_text="case-1").first.click()
+            page.wait_for_selector(ctl("start-screen"), state="detached", timeout=60_000)
+            wait_for_render(page)
+            page.click(ctl("all-cases"))
+            page.wait_for_selector(ctl("clear-cache"), timeout=30_000)
+            before = page.inner_text(ctl("clear-cache"))
+            heavy.clear()
+            page.click(ctl("clear-cache"))
+            button = f"document.querySelector('{ctl('clear-cache')}')"
+            page.wait_for_function(f"({button}?.textContent ?? '') !== {before!r}",
+                                   timeout=30_000)
+            after = page.inner_text(ctl("clear-cache"))
+            check("Clear case cache keeps only the open case", after != before,
+                  f"{before} -> {after}")
+            check("All cases and the clear cost no meta/range/scene request",
+                  not heavy, str(heavy[:2]))
+            page.close()
+        finally:
+            stop_server(proc)
 
 
 def main():
@@ -932,6 +1001,7 @@ def main():
 
             start_screen_checks(browser, cases, args, out)
             local_mode_checks(browser, args, out)
+            zip_checks(browser, out)
             browser.close()
     finally:
         stop_server(server)

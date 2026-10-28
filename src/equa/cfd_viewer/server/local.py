@@ -24,6 +24,7 @@ from pathlib import Path
 
 from aiohttp import web
 
+from .paths import user_dir
 from .sources import is_case
 
 TOKEN_HEADER = "X-Cfd-Viewer-Token"
@@ -89,21 +90,14 @@ class LocalSession:
 # -- per-user files ------------------------------------------------------------
 
 
-def _user_dir(windows_var, xdg_var, xdg_default):
-    base = os.environ.get(windows_var) if os.name == "nt" else None
-    if not base:
-        base = os.environ.get(xdg_var) or str(Path.home() / xdg_default)
-    return Path(base) / "equa" / "cfd-viewer"
-
-
 def instance_path():
     """Where a running local viewer records its port and token."""
-    return _user_dir("LOCALAPPDATA", "XDG_STATE_HOME", ".local/state") / "instance.json"
+    return user_dir("LOCALAPPDATA", "XDG_STATE_HOME", ".local/state") / "instance.json"
 
 
 def settings_path():
     """The user's settings, recent folders among them."""
-    return _user_dir("APPDATA", "XDG_CONFIG_HOME", ".config") / "settings.json"
+    return user_dir("APPDATA", "XDG_CONFIG_HOME", ".config") / "settings.json"
 
 
 def claim_instance(path, session):
@@ -206,13 +200,27 @@ class RecentFolders:
 # -- the folder browser ---------------------------------------------------------
 
 
-def _has_case_below(directory):
-    """A shallow mark: a case among the direct subdirectories. A walk to the scan
-    depth for every listed entry takes seconds on a home or network drive."""
+def _has_zip(directory):
     try:
-        return any(is_case(child) for child in directory.iterdir() if child.is_dir())
+        return any(p.suffix.lower() == ".zip" for p in directory.iterdir())
     except OSError:
         return False
+
+
+def _has_case_below(directory):
+    """A shallow mark: a case among the direct subdirectories, or a zip in the
+    ``cfd`` one, or in *directory* when it is a ``cfd`` directory itself. A walk
+    to the scan depth for every listed entry takes seconds on a home or network
+    drive, and no zip is opened: a project of bare cases is marked too
+    (openspec ice-project-zips, D7)."""
+    if directory.name.lower() == "cfd" and _has_zip(directory):
+        return True
+    try:
+        children = [child for child in directory.iterdir() if child.is_dir()]
+    except OSError:
+        return False
+    return any(is_case(child) or (child.name.lower() == "cfd" and _has_zip(child))
+               for child in children)
 
 
 def browse(path):
