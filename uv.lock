@@ -461,7 +461,7 @@ freeze = [{ name = "pyinstaller", specifier = "==6.22.3" }]
 
 [[package]]
 name = "equa-ci"
-version = "1.0.0b213"
+version = "1.0.0b219"
 source = { registry = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/equa-dev/pypi/simple/" }
 dependencies = [
     { name = "cmake-format" },
@@ -474,7 +474,7 @@ dependencies = [
     { name = "wheel" },
 ]
 wheels = [
-    { url = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/60c16aff-a8fb-47aa-923d-4595ca2f9de2/pypi/download/equa-ci/1b213/equa_ci-1.0.0b213-py3-none-any.whl", hash = "sha256:045815291f5627ad9cd2e76243749ac03dddaf038e6e0976059c0596f16f7a6a", size = 182822, upload-time = "2026-10-28T08:17:44Z" },
+    { url = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/60c16aff-a8fb-47aa-923d-4595ca2f9de2/pypi/download/equa-ci/1b219/equa_ci-1.0.0b219-py3-none-any.whl", hash = "sha256:6303821e3d4af110e1399c05be1282b34acafb36d87ac2e7493356ce852bd29e", size = 184342, upload-time = "2026-10-29T16:12:10Z" },
 ]
 
 [[package]]
