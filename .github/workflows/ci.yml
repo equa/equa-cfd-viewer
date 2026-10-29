@@ -40,7 +40,7 @@ jobs:
   # does not mount, so it runs on the plain runner, which has one.
   checks:
     name: Checks
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON_LINUX || '"ubuntu-latest"') }}
     timeout-minutes: 10
     outputs:
       has_release: ${{ steps.version.outputs.has_release }}
@@ -117,7 +117,7 @@ jobs:
     name: Image
     needs: checks
     if: needs.checks.outputs.has_release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON_LINUX || '"ubuntu-latest"') }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -186,21 +186,25 @@ jobs:
           if [ -f deploy/verify.env ]; then
             ENV_FILE="--env-file deploy/verify.env"
           fi
+          # A runner host may run another job's verify at the same time, so the
+          # container gets a name of its own and a free loopback port.
+          NAME="verify-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           # ENV_FILE is empty or two words, so it is left unquoted.
           # shellcheck disable=SC2086
-          docker run -d --name verify $ENV_FILE \
-            -p 5003:5003 "$IMAGE"
+          docker run -d --name "$NAME" $ENV_FILE \
+            -p 127.0.0.1::5003 "$IMAGE"
+          PORT=$(docker port "$NAME" 5003/tcp | head -n1 | sed 's/.*://')
           for i in $(seq 1 30); do
-            if curl -fsS "http://127.0.0.1:5003/health" > /dev/null; then
+            if curl -fsS "http://127.0.0.1:${PORT}/health" > /dev/null; then
               echo "ready after ${i}s"
-              docker rm -f verify
+              docker rm -f "$NAME"
               exit 0
             fi
             sleep 1
           done
           echo "FATAL: $IMAGE did not become ready; the release is not cut" >&2
-          docker logs verify >&2
-          docker rm -f verify
+          docker logs "$NAME" >&2
+          docker rm -f "$NAME"
           exit 1
 
       - name: Report
@@ -315,7 +319,7 @@ jobs:
     name: Release
     needs: [checks, image, windows]
     if: needs.checks.outputs.has_release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON_LINUX || '"ubuntu-latest"') }}
     timeout-minutes: 10
     steps:
       - name: Checkout
