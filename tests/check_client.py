@@ -18,6 +18,7 @@ import argparse
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -439,8 +440,17 @@ def zip_checks(browser, out):
                   gl_colours(page) >= 40 and not heavy, str(heavy[:2]))
 
             page.click(ctl("all-cases"))
+            held, meta_url = [], re.compile(r"/api/meta")
+            page.route(meta_url, lambda route: held.append(route))
             page.locator(ctl("case-row"), has_text="case-1").first.click()
             page.wait_for_selector(ctl("start-screen"), state="detached", timeout=60_000)
+            opening = page.locator(".busy", has_text="Opening case")
+            opening.wait_for(timeout=10_000)
+            check("a case switch shows Opening case while the meta request runs",
+                  opening.is_visible())
+            for route in held:
+                route.continue_()
+            page.unroute(meta_url)
             wait_for_render(page)
             page.click(ctl("all-cases"))
             page.wait_for_selector(ctl("clear-cache"), timeout=30_000)

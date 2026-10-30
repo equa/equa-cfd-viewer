@@ -832,7 +832,7 @@ each other the wrong geometry. Still **one case per process**, as in Trame.
 | | what it covers | last run (2026-10-28, ice-project-zips branch) |
 |---|---|---|
 | `tests/test_pipeline.py` | the VTK pipeline incl. read-only serial/decomposed cases, no browser, no GL | **68/68** |
-| `tests/check_client.py` | the three.js client in real Chromium, incl. the start screen and zipped cases | **130/130** |
+| `tests/check_client.py` | the three.js client in real Chromium, incl. the start screen and zipped cases | **131/131** |
 | `tests/test_contract.py` | 56 recorded HTTP exchanges replayed (the API only grows) | **56/56** |
 | `tests/test_sources.py`, `test_endpoints.py`, `test_cache.py` | discovery incl. zips, ids, labels, 404s; `/health`, `/api/config`; the case cache | pytest **82** |
 | `tests/check_cockpit_contract.py` | cfd-backend's cfd-viz build + runtime, mirrored | **22/22** (21 without `../cfd-backend`) |

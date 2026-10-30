@@ -111,7 +111,7 @@ export function Hud({ info, stats }) {
  * It should now appear far less often than in the Trame app, because only the
  * stale parts are re-extracted and a cached part never gets here at all.
  */
-export function Busy({ show, error }) {
+export function Busy({ show, label, error }) {
   if (error) {
     return (
       <div className="busy error">
@@ -123,7 +123,7 @@ export function Busy({ show, error }) {
   return (
     <div className="busy">
       <Loader size="md" />
-      <Text size="sm" mt="sm">Extracting…</Text>
+      <Text size="sm" mt="sm">{label}</Text>
     </div>
   )
 }

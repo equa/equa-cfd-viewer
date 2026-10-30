@@ -42,6 +42,9 @@ export default function App() {
   // Which case to open: an id or a name. From ?case= (the cockpit passes a
   // directory name), else chosen on the start screen or in the switcher.
   const [caseKey, setCaseKey] = useState(url.case || null)
+  // True from a case switch until its /api/meta answers; a zip unpacks in that
+  // request, so the old case would otherwise sit there with no sign of work.
+  const [opening, setOpening] = useState(false)
   const [config, setConfig] = useState(null)
   const [entries, setEntries] = useState([])
   const [entriesLoading, setEntriesLoading] = useState(true)
@@ -147,8 +150,10 @@ export default function App() {
   useEffect(() => {
     if (!caseKey) return undefined
     let cancelled = false
+    setOpening(true)
     api.meta(caseKey).then((m) => {
       if (cancelled) return
+      setOpening(false)
       setMeta(m)
       // A case switch keeps the appearance but rebuilds the request: bounds,
       // fields and time steps are all new. The request carries the case's id,
@@ -156,6 +161,7 @@ export default function App() {
       setRequestState((r) => (r && r.case === (m.caseId ?? m.case) ? r : initialRequest(m)))
     }).catch((e) => {
       if (cancelled) return
+      setOpening(false)
       if (e instanceof ApiError && [404, 422, 507].includes(e.status)) {
         // A stale bookmark, a deleted case, or a zip that cannot be unpacked:
         // say so, and offer the others.
@@ -450,7 +456,11 @@ export default function App() {
             onView={onView}
             onRefreshTimes={onRefreshTimes}
           />
-          <Busy show={!start.show && (busy || !request)} error={start.show ? null : error} />
+          <Busy
+            show={!start.show && (opening || busy || !request)}
+            label={opening ? 'Opening case…' : 'Extracting…'}
+            error={start.show ? null : error}
+          />
         </div>
       </div>
       {start.show && (
