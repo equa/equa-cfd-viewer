@@ -1,3 +1,13 @@
+## [1.0.0-beta.6](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-10-30)
+
+### Features
+
+* **cases:** open IDA ICE project case zips through a case cache ([3a8bb84](https://github.com/equa/equa-cfd-viewer/commit/3a8bb84c014ab0dab9684d83eb1ca97c98f338ce))
+
+### Bug Fixes
+
+* **client:** show Opening case while a switched case loads ([9e9f075](https://github.com/equa/equa-cfd-viewer/commit/9e9f07597e5e3643bc48a44cad7a5c5e350ed685))
+
 ## [1.0.0-beta.5](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-10-27)
 
 ### Features
