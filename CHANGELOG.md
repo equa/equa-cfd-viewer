@@ -1,3 +1,9 @@
+## [1.0.0-beta.7](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-11-02)
+
+### Bug Fixes
+
+* **deps:** update non-major dependencies ([46aaabe](https://github.com/equa/equa-cfd-viewer/commit/46aaabe6340b06aef8b1d3cdd38d7c96bfd39ed3))
+
 ## [1.0.0-beta.6](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-10-30)
 
 ### Features
