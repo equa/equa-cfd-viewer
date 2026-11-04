@@ -461,11 +461,12 @@ freeze = [{ name = "pyinstaller", specifier = "==6.22.3" }]
 
 [[package]]
 name = "equa-ci"
-version = "1.0.0b219"
+version = "1.0.0b230"
 source = { registry = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/equa-dev/pypi/simple/" }
 dependencies = [
     { name = "cmake-format" },
     { name = "doit" },
+    { name = "griffecli" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pyyaml" },
@@ -474,7 +475,7 @@ dependencies = [
     { name = "wheel" },
 ]
 wheels = [
-    { url = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/60c16aff-a8fb-47aa-923d-4595ca2f9de2/pypi/download/equa-ci/1b219/equa_ci-1.0.0b219-py3-none-any.whl", hash = "sha256:6303821e3d4af110e1399c05be1282b34acafb36d87ac2e7493356ce852bd29e", size = 184342, upload-time = "2026-10-29T16:12:10Z" },
+    { url = "https://pkgs.dev.azure.com/EQUADevelopment/_packaging/60c16aff-a8fb-47aa-923d-4595ca2f9de2/pypi/download/equa-ci/1b230/equa_ci-1.0.0b230-py3-none-any.whl", hash = "sha256:2333fef445baa3331191d79ff81887893fda3ca6cdfd2c1beaa135855b22c0b0", size = 199104, upload-time = "2026-11-03T16:44:46Z" },
 ]
 
 [[package]]
@@ -697,6 +698,28 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/36/b35747582fa4f1a5453f8f3002405dbac788e450cec7674dc2d204b6ccb5/greenlet-3.5.6-cp315-cp315t-musllinux_1_2_x86_64.whl", hash = "sha256:de9923832f2d8c1a5ecd8d7260465a6ca5a86888a0d129e3bd5cf0406d2fc5bf", size = 1702383, upload-time = "2026-09-14T14:35:58.143Z" },
     { url = "https://files.pythonhosted.org/packages/ed/69/6ec22ac9351e474d2a134d0ff9400dc80362d1c20f0721088ffffdfc205b/greenlet-3.5.6-cp315-cp315t-win_amd64.whl", hash = "sha256:2ab5f42ac6c238eb71770715e6e909ad9a1a92b6c681ccb64cd5a0f07edb953f", size = 331845, upload-time = "2026-09-14T14:27:41.723Z" },
     { url = "https://files.pythonhosted.org/packages/30/cf/697c051fd534e223461fb8b523890e21a24eeca229cd50624cff6f02fabd/greenlet-3.5.6-cp315-cp315t-win_arm64.whl", hash = "sha256:f9fe868463ec7e1363733af77e38a5fda3e9b63940337048c945d69e0c80ff24", size = 315070, upload-time = "2026-09-14T14:22:21.476Z" },
+]
+
+[[package]]
+name = "griffecli"
+version = "2.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama" },
+    { name = "griffelib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c9/8e/d3130e17ae27c900f8f76c96ceb2f02edfe0c7db0366b49e033f81ff81d7/griffecli-2.4.1.tar.gz", hash = "sha256:6db9acad984990b08c833ab5ec73d5a604e317b2290074d04c91ca9e52d35a7b", size = 61762, upload-time = "2026-10-22T11:20:01.054Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/dc/5cdbbbfd1a9e8c0e9b6b8b6e6d839e67f82cb138b77cf74856e5b80527de/griffecli-2.4.1-py3-none-any.whl", hash = "sha256:1678938e7b75a0aa34d3e408d550707a192f5297c3005aa0f92660648c30bc0a", size = 11774, upload-time = "2026-10-22T11:19:57.134Z" },
+]
+
+[[package]]
+name = "griffelib"
+version = "2.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/36/e2/0f5d8ed08766bc6dcd3eebf5a6623d83cbca33a6e4c90aef57156ce745ad/griffelib-2.4.1.tar.gz", hash = "sha256:40c028dd2e623f464423f0e11e3c553158f1cf4f1368239a370534d73e1407ff", size = 245153, upload-time = "2026-10-22T11:20:03.705Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/02/1156d5f5307f573b901b14373848b84e69ca6cab09169b8cc97d16a181f9/griffelib-2.4.1-py3-none-any.whl", hash = "sha256:76bc562f936ad1ce198d2cf6d0731bd5c92a7d934b69ef828ef22ee0ffdb62ce", size = 172983, upload-time = "2026-10-22T11:19:59.843Z" },
 ]
 
 [[package]]

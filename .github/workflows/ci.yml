@@ -341,6 +341,13 @@ jobs:
             "https://github.com/"
           git fetch --tags
 
+      # This job runs on the plain runner (no CI image), whose Node may be older
+      # than semantic-release needs.
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Install Node dependencies
         run: npm ci
 
