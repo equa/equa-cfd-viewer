@@ -332,14 +332,26 @@ jobs:
       # is the owner PAT) so it bypasses the required-status-checks ruleset; a
       # bot-identity push would be rejected (GH013). @semantic-release/github
       # keeps GITHUB_TOKEN for its Release API calls.
+      # A self-hosted host keeps the plain runner's HOME after the job and shares
+      # it between its runner instances, so the global config, and the token
+      # in it, lives under RUNNER_TEMP, which the runner empties.
       - name: Configure git credentials
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
+          export GIT_CONFIG_GLOBAL="$RUNNER_TEMP/gitconfig"
+          echo "GIT_CONFIG_GLOBAL=$GIT_CONFIG_GLOBAL" >> "$GITHUB_ENV"
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf \
             "https://github.com/"
           git fetch --tags
+
+      # This job runs on the plain runner (no CI image), whose Node may be older
+      # than semantic-release needs.
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Install Node dependencies
         run: npm ci
