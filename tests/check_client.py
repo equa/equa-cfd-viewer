@@ -1023,6 +1023,19 @@ def main():
             n = len(scene)
             check("wheeling a deferred field costs no round trip", len(scene) == n)
 
+            # Typed key by key, an entry is unfinished on the way ('.', '0.',
+            # '-'); coercing it to a number on each key dropped the dot.
+            for typed in (".75", "0.75", "-.5"):
+                page.click(field)
+                page.keyboard.press("Control+A")
+                page.keyboard.type(typed, delay=40)
+                page.wait_for_timeout(200)
+                got = page.locator(field).input_value()
+                check(f"typing {typed} keeps it", float(got) == float(typed), f"shows {got!r}")
+            page.keyboard.press("Escape")
+            page.click(ctl("plane-apply"))
+            wait_idle(page, scene)
+
             # ------------------------------------------------ time stepping
             print("\ntime stepping, and going back")
             n = len(scene)

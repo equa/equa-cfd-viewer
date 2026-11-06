@@ -136,8 +136,12 @@ export function useDeferred(committed, onApply) {
  * pane scrolling underneath, and wheel listeners default to passive, where
  * preventDefault is ignored.
  */
-export function NumberField({ value, onChange, step = 1, ...rest }) {
+export function NumberField({ value, onChange, onBlur, step = 1, ...rest }) {
   const ref = useRef(null)
+  // Mantine hands an unfinished entry ('.', '0.', '-') to onChange as a
+  // string; passing it on as a number snapped the field back and ate the dot.
+  // It stays here until it parses, and is dropped on blur.
+  const [pending, setPending] = useState(null)
   const state = useRef({ value, onChange, step })
   state.current = { value, onChange, step }
 
@@ -154,13 +158,32 @@ export function NumberField({ value, onChange, step = 1, ...rest }) {
       // Round to the step's own precision, or float noise turns 2.2 into
       // 2.2000000000000002 in a field the user is reading.
       const decimals = (String(by).split('.')[1] || '').length
+      setPending(null)
       commit(Number(next.toFixed(decimals)))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
-  return <NumberInput {...rest} ref={ref} value={value} step={step} onChange={onChange} />
+  return (
+    <NumberInput
+      {...rest}
+      ref={ref}
+      value={pending ?? value}
+      step={step}
+      onChange={(v) => {
+        if (typeof v === 'number') {
+          setPending(null)
+          onChange(v)
+          return
+        }
+        // '1.0' and '0.' are strings too, yet already numbers: commit them.
+        setPending(v)
+        if (v.trim() !== '' && Number.isFinite(Number(v))) onChange(Number(v))
+      }}
+      onBlur={(e) => { setPending(null); onBlur?.(e) }}
+    />
+  )
 }
 
 /*
