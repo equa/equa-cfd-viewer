@@ -1,3 +1,9 @@
+## [1.0.0-beta.9](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-11-06)
+
+### Bug Fixes
+
+* **viewer:** draw the real cell edges on the boundary and crinkle slice ([d7091a8](https://github.com/equa/equa-cfd-viewer/commit/d7091a8be36374f4ddccd566a4cc3bddd187200b))
+
 ## [1.0.0-beta.8](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-11-06)
 
 ### Features
