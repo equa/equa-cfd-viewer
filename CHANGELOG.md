@@ -1,3 +1,9 @@
+## [1.0.0-beta.15](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-11-06)
+
+### Features
+
+* **viz:** outline OBJ groups in geometry feature edges ([1806633](https://github.com/equa/equa-cfd-viewer/commit/180663354439aee9e07faa7eb6763455c6ce2026))
+
 ## [1.0.0-beta.14](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-11-06)
 
 ### Bug Fixes
