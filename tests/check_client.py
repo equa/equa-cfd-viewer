@@ -604,7 +604,7 @@ def main():
             wait_idle(page, scene)
             # Robust range changes only the reported range, so it is in no
             # part's PART_INPUTS -- which is exactly why it used to do nothing.
-            # It now comes from the cheap /api/range endpoint.
+            # It now comes from the cheap /api/range endpoint, live, no Apply.
             range_calls = []
             page.on("request",
                     lambda r: range_calls.append(r.url) if "api/range" in r.url else None)
@@ -612,7 +612,6 @@ def main():
             open_options(page)
             before = page.locator(ctl("range-max")).input_value()
             page.click(ctl("robust-range"))
-            page.click(ctl("apply-options"))
             wait_idle(page, scene)
             page.wait_for_timeout(600)
             after = page.locator(ctl("range-max")).input_value()
@@ -621,7 +620,6 @@ def main():
             check("robust range asks the cheap range endpoint", len(range_calls) > 0,
                   f"{len(range_calls)} /api/range call(s)")
             page.click(ctl("robust-range"))
-            page.click(ctl("apply-options"))
             wait_idle(page, scene)
 
             # True cell values must produce FLAT per-cell colour, which means

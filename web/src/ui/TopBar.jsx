@@ -16,7 +16,8 @@ import { Head, NumberField, SELECT, Tag, stepFor, useDeferred } from './controls
  * legible.
  *
  * What changed, and it is the point of the whole exercise: the popover's Apply
- * button now covers only the two settings that still cost an extraction.
+ * button now covers only True cell values, the one setting that still costs an
+ * extraction. Robust range is live too: it asks only the cheap range endpoint.
  * Bands, min/max and the opacity ramp became shader uniforms, so they are live
  * and instant -- the Trame app had to defer them behind Apply because each one
  * rebuilt a vtkColorTransferFunction and re-serialised it to the browser. The
@@ -44,9 +45,9 @@ export function TopBar({
   // itself: 1 is uselessly coarse on |U| (0..0.23) and far too fine on p.
   const rangeStep = stepFor(appearance.range[1] - appearance.range[0])
 
-  // Only the two genuinely server-side colour options are deferred now.
+  // Only the one colour option that re-extracts is deferred.
   const options = useDeferred(
-    { robust: request.robust, cell_data: request.cell_data },
+    { cell_data: request.cell_data },
     (draft) => setRequest(draft),
   )
 
@@ -157,6 +158,19 @@ export function TopBar({
               data-ctl="range-max"
             />
           </Group>
+          {/* Turns auto range on: with it off the new range would be fetched
+              and dropped, so the switch would look dead. */}
+          <Switch
+            mt="sm"
+            size="xs"
+            label="Robust range (1–99%)"
+            checked={request.robust}
+            onChange={(e) => {
+              setRequest({ robust: e.currentTarget.checked })
+              setAppearance({ autoRange: true })
+            }}
+            data-ctl="robust-range"
+          />
           <Switch
             mt="sm"
             size="xs"
@@ -169,18 +183,10 @@ export function TopBar({
 
           <Divider my="sm" />
 
-          {/* Deferred: these two re-read or re-bake the scalars, so they keep
-              the Apply button the Trame app gave the whole group. */}
+          {/* Deferred: re-bakes the scalars, so it keeps the Apply button the
+              Trame app gave the whole group. */}
           <Head kind="server">Sampling</Head>
           <Switch
-            size="xs"
-            label="Robust range (1–99%)"
-            checked={options.draft.robust}
-            onChange={(e) => options.set({ robust: e.currentTarget.checked })}
-            data-ctl="robust-range"
-          />
-          <Switch
-            mt={6}
             size="xs"
             label="True cell values"
             description="Flat per cell, not point-interpolated"
