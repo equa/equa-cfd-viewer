@@ -1,3 +1,9 @@
+## [1.0.0-beta.13](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-11-06)
+
+### Features
+
+* **web:** shared look block at the top of each part panel ([a92804d](https://github.com/equa/equa-cfd-viewer/commit/a92804d7e35ba41a2a6a086a89c79ac0fc6b4d0d))
+
 ## [1.0.0-beta.12](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-11-06)
 
 ### Features
