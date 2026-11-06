@@ -23,11 +23,9 @@ const tagged = (text, kind) => (
  * Where a control's cost changed, the control changed with it. Three notes
  * worth reading before editing:
  *
- * - The **line-width sliders are gone**, from streamlines and from geometry.
- *   WebGL caps `lineWidth` at 1, so the Trame app shipped two sliders that
- *   provably did nothing. Tubes are the real answer for thick streamlines and
- *   are one switch away; three.js `Line2`/`LineMaterial` would be the real
- *   answer for the rest, and is not wired yet.
+ * - **Line width** is not `lineWidth`: WebGL caps it at 1, so the Trame app's
+ *   sliders did nothing. Streamlines get thick as tubes; the geometry draws
+ *   with three.js `LineSegments2`, whose width is a pixel uniform.
  * - **Mesh edges on the shell** became a client control (EdgesGeometry), so it
  *   no longer costs a round trip.
  * - **Opacity** everywhere is a uniform, hence live.
@@ -578,6 +576,17 @@ export function GeometryTool({ meta, request, setRequest, style, setStyle }) {
         onChange={(v) => setRequest({ geometry_mode: v })}
         mb="sm"
         data-ctl="geometry-mode"
+      />
+      <LabelledSlider
+        label="Line width (px)"
+        min={1}
+        max={6}
+        step={0.5}
+        precision={1}
+        live
+        value={style.width ?? 1}
+        onChange={(v) => setStyle({ width: v })}
+        data-ctl="geometry-width"
       />
       <LabelledSlider
         label="Opacity"

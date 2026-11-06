@@ -1,5 +1,8 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
 import { FRAG, FRAG_LINE, VERT, VERT_LINE } from './shaders.js'
 import { buildTubeGeometry } from './tube.js'
 
@@ -130,6 +133,9 @@ export class Viewer {
     const { clientWidth: w, clientHeight: h } = this.container
     if (!w || !h) return
     this.renderer.setSize(w, h, false)
+    for (const mesh of this.meshes.values()) {
+      if (mesh.material.isLineMaterial) mesh.material.resolution.set(w, h)
+    }
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
   }
@@ -199,10 +205,26 @@ export class Viewer {
   }
 
   /* A part with no scalars (the building geometry) has nothing to look up, so
-   * it gets a plain neutral material -- light lines on a dark background and
-   * vice versa, the same inversion pipeline.set_theme does server-side. */
-  _neutralMaterial() {
-    return new THREE.LineBasicMaterial({ color: this._neutralColour(), transparent: true })
+   * it gets a plain neutral colour -- light lines on a dark background and
+   * vice versa, the same inversion pipeline.set_theme does server-side.
+   * LineSegments2, not LineSegments: WebGL caps gl.lineWidth at 1 px. */
+  _neutralLines(part) {
+    const position = part.attributes.position.array
+    const index = part.index
+    const pairs = new Float32Array(index.length * 3)
+    for (let i = 0; i < index.length; i++) {
+      const v = index[i] * 3
+      pairs[i * 3] = position[v]
+      pairs[i * 3 + 1] = position[v + 1]
+      pairs[i * 3 + 2] = position[v + 2]
+    }
+    const geometry = new LineSegmentsGeometry().setPositions(pairs)
+    const { clientWidth: w, clientHeight: h } = this.container
+    const material = new LineMaterial({
+      color: this._neutralColour(), linewidth: 1, transparent: true,
+    })
+    material.resolution.set(w || 1, h || 1)
+    return new LineSegments2(geometry, material)
   }
 
   _neutralColour() { return this.light ? 0x3a4048 : 0xd9dceb }
@@ -238,13 +260,11 @@ export class Viewer {
       }
       const scalars = 'scalar' in part.attributes
       let object
-      if (part.mode === 'lines') {
-        object = new THREE.LineSegments(
-          geometry,
-          scalars
-            ? this._material('lines', { hasScalar: true })
-            : this._neutralMaterial(),
-        )
+      if (part.mode === 'lines' && !scalars) {
+        geometry.dispose()
+        object = this._neutralLines(part)
+      } else if (part.mode === 'lines') {
+        object = new THREE.LineSegments(geometry, this._material('lines', { hasScalar: true }))
       } else {
         // A cut plane is read quantitatively against the colour bar, so shading
         // it only corrupts the reading -- ambient 1.0 is flat colour, the same
@@ -414,7 +434,8 @@ export class Viewer {
     else if (!u?.uFlat && merged.solid && mesh.material.color) {
       mesh.material.color.set(merged.solid)   // the neutral line material
     }
-    if (mesh.isMesh) mesh.material.side = merged.cull ? THREE.BackSide : THREE.DoubleSide
+    if (mesh.material.isLineMaterial) mesh.material.linewidth = merged.width ?? 1
+    else if (mesh.isMesh) mesh.material.side = merged.cull ? THREE.BackSide : THREE.DoubleSide
     this._applyBlending(mesh)
     this._applyEdges(name, merged.edges)
   }
@@ -539,7 +560,7 @@ export class Viewer {
     this.light = !!light
     this.scene.background = new THREE.Color(light ? 0xf2f3f5 : 0x16181d)
     for (const [name, mesh] of this.meshes) {
-      if (!mesh.material.uniforms && mesh.material.color) {
+      if ((!mesh.material.uniforms || mesh.material.isLineMaterial) && mesh.material.color) {
         mesh.material.color.setHex(this._neutralColour())
       }
       const edge = this.edges.get(name)
@@ -798,20 +819,26 @@ export class Viewer {
     const mesh = this.meshes.get(name)
     if (!mesh) return null
     const index = mesh.geometry.getIndex()
-    const verts = mesh.geometry.getAttribute('position')?.count ?? 0
+    const lines = mesh.isLineSegments || mesh.isLineSegments2
     // Lines carry 2 indices per primitive, triangles 3 -- dividing by 3
-    // regardless reported nonsense for the streamline part.
-    const perPrimitive = mesh.isLineSegments ? 2 : 3
-    const prims = index ? index.count / perPrimitive : 0
+    // regardless reported nonsense for the streamline part. A LineSegments2
+    // is one instance per segment, so its index describes a quad, not the data.
+    const prims = mesh.isLineSegments2
+      ? mesh.geometry.instanceCount
+      : (index ? index.count / (lines ? 2 : 3) : 0)
+    const verts = mesh.isLineSegments2
+      ? 2 * prims
+      : (mesh.geometry.getAttribute('position')?.count ?? 0)
     return {
-      mode: mesh.isLineSegments ? 'lines' : 'triangles',
+      mode: lines ? 'lines' : 'triangles',
       vertices: verts,
-      triangles: mesh.isLineSegments ? 0 : prims,
+      triangles: lines ? 0 : prims,
       primitives: prims,
-      verticesPerTriangle: (!mesh.isLineSegments && prims)
+      verticesPerTriangle: (!lines && prims)
         ? Number((verts / prims).toFixed(2)) : null,
       colored: mesh.material.uniforms?.uColored?.value ?? null,
       hasScalar: mesh.material.uniforms?.uHasScalar?.value ?? null,
+      lineWidth: mesh.material.isLineMaterial ? mesh.material.linewidth : null,
     }
   }
 

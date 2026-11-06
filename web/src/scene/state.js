@@ -113,7 +113,7 @@ export function initialAppearance(theme) {
       iso: { opacity: 0.35, colored: true, solid: '#b8c0cc' },
       stream: { opacity: 1, colored: true, solid: '#ffffff' },
       glyph: { opacity: 1, colored: true, solid: '#b8c0cc' },
-      geometry: { opacity: 1 },
+      geometry: { opacity: 1, width: 1 },
     },
     lighting: { ambient: 0.3, diffuse: 0.7, lightKit: true },
     triad: true,

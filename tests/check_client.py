@@ -825,6 +825,28 @@ def main():
             wait_idle(page, scene)
             check("plane Apply commits once", len(scene) - n == 1, f"{len(scene) - n} request(s)")
 
+            # ------------------------------------------- geometry line width
+            print("\ngeometry line width")
+            page.click(ctl("show-geometry"))
+            page.click(ctl("tool-geometry"))
+            wait_idle(page, scene)
+            geo = page.evaluate("window.__viz.partInfo('geometry')")
+            check("geometry draws as wide lines", geo and geo["lineWidth"] == 1,
+                  f"{geo}")
+            n = len(scene)
+            slider_drag(page, ctl("geometry-width"), fraction=0.85)()
+            page.wait_for_timeout(500)
+            after = page.evaluate("window.__viz.partInfo('geometry')")
+            check("line width widens the geometry", after["lineWidth"] > 1,
+                  f"{after['lineWidth']} px")
+            check("line width costs no round trip", len(scene) == n,
+                  f"{len(scene) - n} request(s)")
+            check("line width rebuilds no geometry",
+                  after["primitives"] == geo["primitives"],
+                  f"{geo['primitives']:,} segments")
+            page.click(ctl("show-geometry"))
+            wait_idle(page, scene)
+
             # ------------------------------- isosurface: reseed, and the lock
             print("\nisosurface field: follows, then locks")
             page.click(ctl("show-contour"))
