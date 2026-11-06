@@ -64,7 +64,7 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v8.3.2
 
       - name: Install Node dependencies
         run: npm ci
@@ -112,6 +112,19 @@ jobs:
           UV_INDEX_EQUA_DEV_USERNAME: __token__
           UV_INDEX_EQUA_DEV_PASSWORD: ${{ secrets.AZURE_DEVOPS_TOKEN }}
         run: uv run doit ci
+
+      # A held update pull request runs its checks again once this branch takes
+      # what it waited for (bump-retry). A step, not a job, so it takes no runner
+      # slot (self-hosted-ci-runners D12); it never fails Checks. GHCR_TOKEN, as
+      # the bump bot's: an update made with GITHUB_TOKEN starts no workflow.
+      - name: Update held bumps
+        if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          BEFORE: ${{ github.event.before }}
+        run: uv run --no-sync python -m equa.ci.bump_retry --branch "$GITHUB_REF_NAME" --before "$BEFORE"
 
   image:
     name: Image
@@ -332,14 +345,26 @@ jobs:
       # is the owner PAT) so it bypasses the required-status-checks ruleset; a
       # bot-identity push would be rejected (GH013). @semantic-release/github
       # keeps GITHUB_TOKEN for its Release API calls.
+      # A self-hosted host keeps the plain runner's HOME after the job and shares
+      # it between its runner instances, so the global config, and the token
+      # in it, lives under RUNNER_TEMP, which the runner empties.
       - name: Configure git credentials
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
+          export GIT_CONFIG_GLOBAL="$RUNNER_TEMP/gitconfig"
+          echo "GIT_CONFIG_GLOBAL=$GIT_CONFIG_GLOBAL" >> "$GITHUB_ENV"
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf \
             "https://github.com/"
           git fetch --tags
+
+      # This job runs on the plain runner (no CI image), whose Node may be older
+      # than semantic-release needs.
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Install Node dependencies
         run: npm ci
