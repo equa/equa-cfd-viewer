@@ -554,16 +554,17 @@ def main():
             check("banding is reversible", gl_colours(page) > banded)
             check("un-banding does not refetch", len(scene) == n)
 
-            # Opacity-by-value is per part, and must work on the shell AS IT
-            # SHIPS -- uncoloured, a neutral grey so the slice inside it reads.
-            # It was reported broken because the ramp had been multiplied by
-            # "colour by field", so the one surface you most want to see through
-            # ignored it. The shell is also the ideal subject: no-slip walls, so
-            # |U| is ~0 across all of them and the room should all but empty out.
+            # Opacity-by-value is per part, and must work on an UNCOLOURED
+            # shell. It was reported broken because the ramp had been multiplied
+            # by "colour by field". The shell is the ideal subject: no-slip
+            # walls, so |U| is ~0 across all of them and the room should all
+            # but empty out.
             page.keyboard.press("Escape")
             page.click(ctl("tool-boundary"))
-            check("the shell ships uncoloured",
-                  not page.locator(ctl("surface-colored")).is_checked())
+            check("the shell ships coloured by the field",
+                  page.locator(ctl("surface-colored")).is_checked())
+            page.click(ctl("surface-colored"))
+            page.wait_for_timeout(400)
             check("opacity by value is no longer a global option",
                   page.locator(ctl("opacity-map")).count() == 0)
             before_bg = gl_background(page)
@@ -596,12 +597,24 @@ def main():
             page.wait_for_timeout(400)
             check("the solid-colour picker returns with colouring off",
                   page.locator(ctl("surface-solid")).count() == 1)
-            for part in ("contour", "stream", "glyph"):
-                check(f"{part} has its own colour-by-field toggle",
-                      page.locator(ctl(f"{part}-colored")).count() == 1)
+            page.click(ctl("surface-colored"))
+            page.wait_for_timeout(400)
+            # Every part but the geometry shares one look block, first in its
+            # panel: colour by field, opacity by value, opacity.
             for part in ("surface", "slice", "contour", "stream", "glyph"):
-                check(f"{part} has its own opacity-by-value toggle",
-                      page.locator(ctl(f"{part}-opacity-map")).count() == 1)
+                for c in ("colored", "opacity-map", "opacity"):
+                    check(f"{part} has its own {c} control",
+                          page.locator(ctl(f"{part}-{c}")).count() == 1)
+            check("the cut plane's look comes first",
+                  page.evaluate("""() => {
+                    const look = document.querySelector('[data-ctl="slice-colored"]')
+                    const axis = document.querySelector('[data-ctl="plane-axis"]')
+                    return !!(look.compareDocumentPosition(axis)
+                              & Node.DOCUMENT_POSITION_FOLLOWING)
+                  }"""))
+            check("isosurfaces and streamlines ship solid",
+                  not page.locator(ctl("contour-colored")).is_checked()
+                  and not page.locator(ctl("stream-colored")).is_checked())
 
             # ----------------------------------- robust range / cell values
             print("\nsampling options (both were reported dead)")

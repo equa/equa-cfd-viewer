@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Badge, ColorInput, Group, NumberInput, Slider, Switch, Text } from '@mantine/core'
+import { Badge, ColorInput, Divider, Group, NumberInput, Slider, Switch, Text } from '@mantine/core'
 
 /*
  * The control vocabulary shared by every panel.
@@ -216,6 +216,40 @@ export function ColourBy({
         />
       )}
       <OpacityByValue ctl={ctl} on={opacityMap ?? false} onChange={onChange} />
+    </>
+  )
+}
+
+/*
+ * The look every field-carrying part shares, at the top of its panel: colour,
+ * opacity by value and opacity. The range and colour map stay global, so a
+ * field never reads differently on two parts.
+ */
+export function PartLook({
+  ctl, style, onChange, minOpacity = 0, opacityStep = 0.01,
+}) {
+  return (
+    <>
+      <ColourBy
+        ctl={ctl}
+        colored={style.colored ?? true}
+        solid={style.solid}
+        opacityMap={style.opacityMap}
+        onChange={onChange}
+      />
+      <div style={{ marginTop: 8 }}>
+        <LabelledSlider
+          label="Opacity"
+          min={minOpacity}
+          max={1}
+          step={opacityStep}
+          live
+          value={style.opacity ?? 1}
+          onChange={(v) => onChange({ opacity: v })}
+          data-ctl={`${ctl}-opacity`}
+        />
+      </div>
+      <Divider my="sm" />
     </>
   )
 }

@@ -2,7 +2,7 @@ import {
   Button, Divider, Group, MultiSelect, SegmentedControl, Select, Switch, Text,
 } from '@mantine/core'
 import {
-  ColourBy, INPUT, OpacityByValue, LabelledSlider, NumberField, SELECT, Tag, stepFor, useDeferred,
+  INPUT, LabelledSlider, PartLook, NumberField, SELECT, Tag, stepFor, useDeferred,
 } from './controls.jsx'
 
 /* A switch label carrying its cost. The mixed panels -- Boundary especially --
@@ -28,7 +28,8 @@ const tagged = (text, kind) => (
  *   with three.js `LineSegments2`, whose width is a pixel uniform.
  * - **Mesh edges** come from the server: only it knows which triangle edges
  *   are cell edges and which are diagonals of a split cell.
- * - **Opacity** everywhere is a uniform, hence live.
+ * - **Colour and opacity** sit in the same `PartLook` block at the top of
+ *   every panel but Geometry; all of it is uniforms, hence live.
  */
 
 const AXES = [
@@ -54,6 +55,7 @@ export function CutPlaneTool({ meta, request, setRequest, style, setStyle, plane
 
   return (
     <>
+      <PartLook ctl="slice" style={style} onChange={setStyle} />
       <Text size="xs" c="dimmed" mb="xs">
         Slice, stream seeds and arrows all sit on this plane.
       </Text>
@@ -124,17 +126,6 @@ export function CutPlaneTool({ meta, request, setRequest, style, setStyle, plane
         onChange={(e) => setRequest({ slice_edges: e.currentTarget.checked })}
         data-ctl="slice-edges"
       />
-      <LabelledSlider
-        label="Opacity"
-        min={0}
-        max={1}
-        step={0.01}
-        live
-        value={style.opacity ?? 1}
-        onChange={(v) => setStyle({ opacity: v })}
-        data-ctl="slice-opacity"
-      />
-      <OpacityByValue ctl="slice" on={style.opacityMap ?? false} onChange={setStyle} />
     </>
   )
 }
@@ -143,15 +134,8 @@ export function BoundaryTool({ meta, request, setRequest, style, setStyle }) {
   const patches = useDeferred({ patches: request.patches }, (draft) => setRequest(draft))
   return (
     <>
-      <ColourBy
-        ctl="surface"
-        colored={style.colored ?? false}
-        solid={style.solid}
-        opacityMap={style.opacityMap}
-        onChange={setStyle}
-      />
+      <PartLook ctl="surface" style={style} onChange={setStyle} />
       <Switch
-        mt={6}
         size="xs"
         label={tagged('Cull near walls', 'client')}
         checked={style.cull ?? true}
@@ -174,16 +158,6 @@ export function BoundaryTool({ meta, request, setRequest, style, setStyle }) {
         checked={request.surface_clip}
         onChange={(e) => setRequest({ surface_clip: e.currentTarget.checked })}
         data-ctl="surface-clip"
-      />
-      <LabelledSlider
-        label="Opacity"
-        min={0}
-        max={1}
-        step={0.01}
-        live
-        value={style.opacity ?? 1}
-        onChange={(v) => setStyle({ opacity: v })}
-        data-ctl="surface-opacity"
       />
 
       <Divider my="sm" />
@@ -226,6 +200,14 @@ export function ContourTool({ meta, request, setRequest, style, setStyle }) {
   const isoStep = stepFor(Number(request.contour_max) - Number(request.contour_min))
   return (
     <>
+      {/* Nested translucent shells stack up fast, hence the 0.35 default. */}
+      <PartLook
+        ctl="contour"
+        style={style}
+        onChange={setStyle}
+        minOpacity={0.05}
+        opacityStep={0.05}
+      />
       {/*
         The isosurface contours the COLOUR field by default, which is usually
         what you want and is why its values re-seed when that field changes.
@@ -305,24 +287,6 @@ export function ContourTool({ meta, request, setRequest, style, setStyle }) {
       <Text size="xs" c="dimmed" mt={6} mb="xs">
         Several surfaces spread evenly inside [min, max].
       </Text>
-      <ColourBy
-        ctl="contour"
-        colored={style.colored ?? true}
-        solid={style.solid}
-        opacityMap={style.opacityMap}
-        onChange={setStyle}
-      />
-      {/* Nested translucent shells stack up fast, hence the 0.35 default. */}
-      <LabelledSlider
-        label="Opacity"
-        min={0.05}
-        max={1}
-        step={0.05}
-        live
-        value={style.opacity ?? 0.35}
-        onChange={(v) => setStyle({ opacity: v })}
-        data-ctl="contour-opacity"
-      />
     </>
   )
 }
@@ -351,6 +315,7 @@ export function StreamTool({
 
   return (
     <>
+      <PartLook ctl="stream" style={style} onChange={setStyle} />
       <Select
         {...SELECT}
         label="Vector field"
@@ -439,14 +404,6 @@ export function StreamTool({
         />
       ) : null}
 
-      <ColourBy
-        ctl="stream"
-        colored={style.colored ?? true}
-        solid={style.solid}
-        opacityMap={style.opacityMap}
-        onChange={setStyle}
-      />
-
       <Divider my="sm" />
 
       {/*
@@ -504,6 +461,7 @@ export function StreamTool({
 export function GlyphTool({ meta, request, setRequest, style, setStyle }) {
   return (
     <>
+      <PartLook ctl="glyph" style={style} onChange={setStyle} />
       {/* Arrows always orient by a vector field (default U), independent of the
           colour field -- they went invisible when colouring by a large scalar
           like T. Shares the selection with streamlines. */}
@@ -562,13 +520,6 @@ export function GlyphTool({ meta, request, setRequest, style, setStyle }) {
         value={request.glyph_scale}
         onCommit={(v) => setRequest({ glyph_scale: v })}
         data-ctl="glyph-scale"
-      />
-      <ColourBy
-        ctl="glyph"
-        colored={style.colored ?? true}
-        solid={style.solid}
-        opacityMap={style.opacityMap}
-        onChange={setStyle}
       />
     </>
   )

@@ -51,8 +51,7 @@ export const VIEW_BUTTONS = [
 
 /* Defaults carried over from the Trame app deliberately -- they are tuned, not
  * arbitrary. The shell starts opaque but front-face culled (so you see into the
- * room without transparency) and NOT field-coloured (so the slice reads against
- * a neutral grey); the heavy representations start off. */
+ * room without transparency); the heavy representations start off. */
 export function initialRequest(meta) {
   const [lo, hi] = [0, 1]
   return {
@@ -106,17 +105,14 @@ export function initialAppearance(theme) {
       stream: false, glyph: false, geometry: false,
     },
     styles: {
-      // colored:false is the Trame default -- a neutral shell, culled at the
-      // near walls, with the field colour carried by the slice inside it.
-      // `colored` is per part, and the defaults are Niklas's: the shell is a
-      // neutral grey so the slice inside it reads, everything else is coloured
-      // by the field. `solid` is the colour used when colouring is off.
-      // `opacityMap` fades low values; it works on an uncoloured part too, so
-      // the grey shell can empty out by |U| and still read as grey.
-      boundary: { opacity: 1, opacityMap: false, cull: true, colored: false, solid: '#b8c0cc' },
-      slice: { opacity: 1, opacityMap: false, colored: true },
-      iso: { opacity: 0.35, opacityMap: false, colored: true, solid: '#b8c0cc' },
-      stream: { opacity: 1, opacityMap: false, colored: true, solid: '#ffffff' },
+      // `colored` is per part, and the defaults are Niklas's: isosurfaces and
+      // streamlines start solid, the rest coloured by the field. `solid` is the
+      // colour used when colouring is off. `opacityMap` fades low values; it
+      // works on an uncoloured part too.
+      boundary: { opacity: 1, opacityMap: false, cull: true, colored: true, solid: '#b8c0cc' },
+      slice: { opacity: 1, opacityMap: false, colored: true, solid: '#b8c0cc' },
+      iso: { opacity: 0.35, opacityMap: false, colored: false, solid: '#b8c0cc' },
+      stream: { opacity: 1, opacityMap: false, colored: false, solid: '#ffffff' },
       glyph: { opacity: 1, opacityMap: false, colored: true, solid: '#b8c0cc' },
       geometry: { opacity: 1, width: 1 },
     },
