@@ -1,3 +1,9 @@
+## [1.0.0-beta.11](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-11-06)
+
+### Bug Fixes
+
+* **web:** limit the streamline animation speed to useful values ([879a6d7](https://github.com/equa/equa-cfd-viewer/commit/879a6d75f17ac1ed09a40ecfd3f474e61bccc56c))
+
 ## [1.0.0-beta.10](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-11-06)
 
 ### Features
