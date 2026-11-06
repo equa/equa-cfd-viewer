@@ -1,3 +1,10 @@
+## [1.0.0-beta.8](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-11-06)
+
+### Features
+
+* **web:** make robust range live, outside Apply ([3c74710](https://github.com/equa/equa-cfd-viewer/commit/3c747106d875f94b979b3c841a29eb74e40d3293))
+* **web:** set the geometry line width ([d54d336](https://github.com/equa/equa-cfd-viewer/commit/d54d33690633889e354ccd66fb60f8b6fef1325f))
+
 ## [1.0.0-beta.7](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-11-02)
 
 ### Bug Fixes
