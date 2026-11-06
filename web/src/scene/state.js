@@ -100,7 +100,6 @@ export function initialAppearance(theme) {
     autoRange: true,
     range: [0, 1],
     bands: 0,
-    opacityMap: false,
     theme,
     visible: {
       boundary: true, slice: true, iso: false,
@@ -112,11 +111,13 @@ export function initialAppearance(theme) {
       // `colored` is per part, and the defaults are Niklas's: the shell is a
       // neutral grey so the slice inside it reads, everything else is coloured
       // by the field. `solid` is the colour used when colouring is off.
-      boundary: { opacity: 1, cull: true, colored: false, solid: '#b8c0cc' },
-      slice: { opacity: 1, colored: true },
-      iso: { opacity: 0.35, colored: true, solid: '#b8c0cc' },
-      stream: { opacity: 1, colored: true, solid: '#ffffff' },
-      glyph: { opacity: 1, colored: true, solid: '#b8c0cc' },
+      // `opacityMap` fades low values; it works on an uncoloured part too, so
+      // the grey shell can empty out by |U| and still read as grey.
+      boundary: { opacity: 1, opacityMap: false, cull: true, colored: false, solid: '#b8c0cc' },
+      slice: { opacity: 1, opacityMap: false, colored: true },
+      iso: { opacity: 0.35, opacityMap: false, colored: true, solid: '#b8c0cc' },
+      stream: { opacity: 1, opacityMap: false, colored: true, solid: '#ffffff' },
+      glyph: { opacity: 1, opacityMap: false, colored: true, solid: '#b8c0cc' },
       geometry: { opacity: 1, width: 1 },
     },
     lighting: { ambient: 0.3, diffuse: 0.7, lightKit: true },

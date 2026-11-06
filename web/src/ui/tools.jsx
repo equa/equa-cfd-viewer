@@ -2,7 +2,7 @@ import {
   Button, Divider, Group, MultiSelect, SegmentedControl, Select, Switch, Text,
 } from '@mantine/core'
 import {
-  ColourBy, INPUT, LabelledSlider, NumberField, SELECT, Tag, stepFor, useDeferred,
+  ColourBy, INPUT, OpacityByValue, LabelledSlider, NumberField, SELECT, Tag, stepFor, useDeferred,
 } from './controls.jsx'
 
 /* A switch label carrying its cost. The mixed panels -- Boundary especially --
@@ -134,6 +134,7 @@ export function CutPlaneTool({ meta, request, setRequest, style, setStyle, plane
         onChange={(v) => setStyle({ opacity: v })}
         data-ctl="slice-opacity"
       />
+      <OpacityByValue ctl="slice" on={style.opacityMap ?? false} onChange={setStyle} />
     </>
   )
 }
@@ -146,6 +147,7 @@ export function BoundaryTool({ meta, request, setRequest, style, setStyle }) {
         ctl="surface"
         colored={style.colored ?? false}
         solid={style.solid}
+        opacityMap={style.opacityMap}
         onChange={setStyle}
       />
       <Switch
@@ -307,6 +309,7 @@ export function ContourTool({ meta, request, setRequest, style, setStyle }) {
         ctl="contour"
         colored={style.colored ?? true}
         solid={style.solid}
+        opacityMap={style.opacityMap}
         onChange={setStyle}
       />
       {/* Nested translucent shells stack up fast, hence the 0.35 default. */}
@@ -440,6 +443,7 @@ export function StreamTool({
         ctl="stream"
         colored={style.colored ?? true}
         solid={style.solid}
+        opacityMap={style.opacityMap}
         onChange={setStyle}
       />
 
@@ -563,6 +567,7 @@ export function GlyphTool({ meta, request, setRequest, style, setStyle }) {
         ctl="glyph"
         colored={style.colored ?? true}
         solid={style.solid}
+        opacityMap={style.opacityMap}
         onChange={setStyle}
       />
     </>

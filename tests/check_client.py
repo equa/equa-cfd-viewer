@@ -554,28 +554,30 @@ def main():
             check("banding is reversible", gl_colours(page) > banded)
             check("un-banding does not refetch", len(scene) == n)
 
-            # Opacity-by-value must work on the shell AS IT SHIPS -- uncoloured,
-            # a neutral grey so the slice inside it reads. It was reported broken
-            # because the ramp had been multiplied by "colour by field", so the
-            # one surface you most want to see through ignored it. The shell is
-            # also the ideal subject: no-slip walls, so |U| is ~0 across all of
-            # them and the room should all but empty out.
+            # Opacity-by-value is per part, and must work on the shell AS IT
+            # SHIPS -- uncoloured, a neutral grey so the slice inside it reads.
+            # It was reported broken because the ramp had been multiplied by
+            # "colour by field", so the one surface you most want to see through
+            # ignored it. The shell is also the ideal subject: no-slip walls, so
+            # |U| is ~0 across all of them and the room should all but empty out.
             page.keyboard.press("Escape")
             page.click(ctl("tool-boundary"))
             check("the shell ships uncoloured",
                   not page.locator(ctl("surface-colored")).is_checked())
+            check("opacity by value is no longer a global option",
+                  page.locator(ctl("opacity-map")).count() == 0)
             before_bg = gl_background(page)
             n = len(scene)
-            open_options(page)
-            page.click(ctl("opacity-map"))
+            page.click(ctl("surface-opacity-map"))
             page.wait_for_timeout(900)
             after_bg = gl_background(page)
             check("opacity mapping does not refetch", len(scene) == n)
             check("opacity mapping fades low values", after_bg > before_bg + 0.05,
                   f"background {before_bg:.0%} -> {after_bg:.0%}")
+            check("it fades only the part that asked for it",
+                  page.evaluate("window.__viz.partInfo('slice')")["opacityMap"] == 0)
             shot(page, out / "02b-opacity-map.png")
-            page.click(ctl("opacity-map"))
-            page.keyboard.press("Escape")
+            page.click(ctl("surface-opacity-map"))
             page.wait_for_timeout(500)
             check("opacity mapping is reversible",
                   abs(gl_background(page) - before_bg) < 0.05,
@@ -597,6 +599,9 @@ def main():
             for part in ("contour", "stream", "glyph"):
                 check(f"{part} has its own colour-by-field toggle",
                       page.locator(ctl(f"{part}-colored")).count() == 1)
+            for part in ("surface", "slice", "contour", "stream", "glyph"):
+                check(f"{part} has its own opacity-by-value toggle",
+                      page.locator(ctl(f"{part}-opacity-map")).count() == 1)
 
             # ----------------------------------- robust range / cell values
             print("\nsampling options (both were reported dead)")

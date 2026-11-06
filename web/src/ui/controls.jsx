@@ -169,7 +169,27 @@ export function NumberField({ value, onChange, step = 1, ...rest }) {
  * Every field-coloured part wants the same pair, so it lives here rather than
  * being repeated in five panels. Both halves are shader uniforms: instant.
  */
-export function ColourBy({ ctl, colored, solid, onChange, defaultSolid = '#b8c0cc' }) {
+export function OpacityByValue({ ctl, on, onChange }) {
+  return (
+    <Switch
+      mt={6}
+      size="xs"
+      label={(
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          Opacity by value<Tag kind="client" />
+        </span>
+      )}
+      description="Low values fade out (linear)"
+      checked={on}
+      onChange={(e) => onChange({ opacityMap: e.currentTarget.checked })}
+      data-ctl={`${ctl}-opacity-map`}
+    />
+  )
+}
+
+export function ColourBy({
+  ctl, colored, solid, opacityMap, onChange, defaultSolid = '#b8c0cc',
+}) {
   return (
     <>
       <Switch
@@ -195,6 +215,7 @@ export function ColourBy({ ctl, colored, solid, onChange, defaultSolid = '#b8c0c
           data-ctl={`${ctl}-solid`}
         />
       )}
+      <OpacityByValue ctl={ctl} on={opacityMap ?? false} onChange={onChange} />
     </>
   )
 }

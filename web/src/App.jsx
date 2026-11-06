@@ -207,10 +207,6 @@ export default function App() {
   useEffect(() => { viewerRef.current?.setBands(appearance.bands) }, [appearance.bands])
 
   useEffect(() => {
-    viewerRef.current?.setOpacityMap(appearance.opacityMap)
-  }, [appearance.opacityMap])
-
-  useEffect(() => {
     for (const [part, style] of Object.entries(appearance.styles)) {
       viewerRef.current?.setStyle(part, style)
     }

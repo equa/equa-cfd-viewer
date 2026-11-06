@@ -70,15 +70,14 @@ export class Viewer {
     this.lut.magFilter = THREE.LinearFilter
     this.lut.wrapS = THREE.ClampToEdgeWrapping
     this.lut.wrapT = THREE.ClampToEdgeWrapping
-    // uLut, uRange, uBands and uOpacityMap are shared *objects*, so a colour-map
-    // or range change is one assignment for the whole scene. Opacity and
-    // lighting are per material: the shell fades while the slice stays solid,
-    // and the slice is drawn unlit.
+    // uLut, uRange and uBands are shared *objects*, so a colour-map or range
+    // change is one assignment for the whole scene. Opacity, the opacity ramp
+    // and lighting are per material: the shell fades while the slice stays
+    // solid, and the slice is drawn unlit.
     this.shared = {
       uLut: { value: this.lut },
       uRange: { value: new THREE.Vector2(0, 1) },
       uBands: { value: 0 },
-      uOpacityMap: { value: 0 },
       // Streamline comets. The PHASE is accumulated on the CPU rather than
       // derived from a raw clock: `uTime * speed` would drift out of float32
       // precision inside fract() over a long session, and changing the speed
@@ -100,7 +99,6 @@ export class Viewer {
     this.tubes = { on: false, radius: 0.02, sides: 8 }
     this._streamLines = null   // the decoded LINE part, kept so tubes can be
                                // rebuilt without another fetch
-    this.opacityMap = false
     this.lighting = { ambient: 0.35, diffuse: 0.65, lightKit: true }
     this.meshes = new Map()      // part name -> Mesh | LineSegments
     this.edges = new Map()       // part name -> LineSegments of mesh edges
@@ -174,6 +172,7 @@ export class Viewer {
     const uniforms = {
       ...this.shared,
       uOpacity: { value: 1 },
+      uOpacityMap: { value: 0 },
       uAmbient: { value: unlit ? 1 : this.lighting.ambient },
       uDiffuse: { value: unlit ? 0 : this._diffuse() },
       // Per material, not shared: only the streamlines animate. Everything
@@ -418,7 +417,7 @@ export class Viewer {
    * without making its walls transparent. */
   setStyle(name, style) {
     const merged = {
-      opacity: 1, cull: false, colored: true, solid: null,
+      opacity: 1, opacityMap: false, cull: false, colored: true, solid: null,
       ...(this.styles.get(name) || {}), ...style,
     }
     this.styles.set(name, merged)
@@ -431,6 +430,7 @@ export class Viewer {
     // swap: the Trame app turns the mapper's ScalarVisibility off, which here
     // would mean rebuilding the material.
     if (u?.uColored) u.uColored.value = merged.colored ? 1 : 0
+    if (u?.uOpacityMap) u.uOpacityMap.value = merged.opacityMap ? 1 : 0
     if (u?.uFlat && merged.solid) u.uFlat.value.set(merged.solid)
     else if (!u?.uFlat && merged.solid && mesh.material.color) {
       mesh.material.color.set(merged.solid)   // the neutral line material
@@ -469,7 +469,8 @@ export class Viewer {
   _applyBlending(mesh) {
     const opacity = mesh.material.uniforms?.uOpacity?.value ?? mesh.material.opacity ?? 1
     const animating = (mesh.material.uniforms?.uComets?.value ?? 0) > 0.5
-    const solid = opacity >= 0.999 && !this.opacityMap && !animating
+    const ramp = (mesh.material.uniforms?.uOpacityMap?.value ?? 0) > 0.5
+    const solid = opacity >= 0.999 && !ramp && !animating
     mesh.material.transparent = !solid
     mesh.material.depthWrite = solid
     mesh.material.needsUpdate = true
@@ -482,12 +483,6 @@ export class Viewer {
   /* 0 (or 1) = smooth ramp, N = N discrete bands. One uniform for the whole
    * scene: instant, no geometry, no LUT rebuild, no round trip. */
   setBands(n) { this.shared.uBands.value = Number(n) || 0 }
-
-  setOpacityMap(on) {
-    this.opacityMap = !!on
-    this.shared.uOpacityMap.value = on ? 1 : 0
-    for (const mesh of this.meshes.values()) this._applyBlending(mesh)
-  }
 
   /* Comets riding the streamlines: pure GPU state, no refetch.
    *
@@ -835,6 +830,7 @@ export class Viewer {
       colored: mesh.material.uniforms?.uColored?.value ?? null,
       hasScalar: mesh.material.uniforms?.uHasScalar?.value ?? null,
       lineWidth: mesh.material.isLineMaterial ? mesh.material.linewidth : null,
+      opacityMap: mesh.material.uniforms?.uOpacityMap?.value ?? null,
       edges: (this.edges.get(name)?.geometry.index.count ?? 0) / 2,
     }
   }

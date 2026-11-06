@@ -18,7 +18,7 @@ import { Head, NumberField, SELECT, Tag, stepFor, useDeferred } from './controls
  * What changed, and it is the point of the whole exercise: the popover's Apply
  * button now covers only True cell values, the one setting that still costs an
  * extraction. Robust range is live too: it asks only the cheap range endpoint.
- * Bands, min/max and the opacity ramp became shader uniforms, so they are live
+ * Bands and min/max became shader uniforms, so they are live
  * and instant -- the Trame app had to defer them behind Apply because each one
  * rebuilt a vtkColorTransferFunction and re-serialised it to the browser. The
  * `server`/`client` tags in the popover say which is which.
@@ -170,15 +170,6 @@ export function TopBar({
               setAppearance({ autoRange: true })
             }}
             data-ctl="robust-range"
-          />
-          <Switch
-            mt="sm"
-            size="xs"
-            label="Opacity by value"
-            description="Low values fade out (linear)"
-            checked={appearance.opacityMap}
-            onChange={(e) => setAppearance({ opacityMap: e.currentTarget.checked })}
-            data-ctl="opacity-map"
           />
 
           <Divider my="sm" />
