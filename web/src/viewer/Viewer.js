@@ -720,7 +720,8 @@ export class Viewer {
   }
 
   screenshot() {
-    this._draw()
+    // Scene only: the axes gizmo, like the legend, is screen furniture.
+    this.renderer.render(this.scene, this.camera)
     return this.renderer.domElement.toDataURL('image/png')
   }
 
