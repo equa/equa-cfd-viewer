@@ -1,3 +1,9 @@
+## [1.0.0-beta.10](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-11-06)
+
+### Features
+
+* **viewer:** freeze streamline seeds until re-seed ([4306eeb](https://github.com/equa/equa-cfd-viewer/commit/4306eeb3d6f89219c4a386fb3d7cbce30a27b45e))
+
 ## [1.0.0-beta.9](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-11-06)
 
 ### Bug Fixes
