@@ -1,3 +1,9 @@
+## [1.0.0-beta.14](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-11-06)
+
+### Bug Fixes
+
+* **web:** keep a leading or trailing dot while typing a number ([c97d1b4](https://github.com/equa/equa-cfd-viewer/commit/c97d1b40ab2f55880a282d76512310a48fa6c789))
+
 ## [1.0.0-beta.13](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-11-06)
 
 ### Features
