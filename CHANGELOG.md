@@ -1,3 +1,9 @@
+## [1.0.0-beta.16](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2026-11-06)
+
+### Features
+
+* **web:** corner axes gizmo replaces the in-scene triad ([8d4a8ca](https://github.com/equa/equa-cfd-viewer/commit/8d4a8ca27a01f1c960b2b84e155ff5b2bcb4a6fb))
+
 ## [1.0.0-beta.15](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-11-06)
 
 ### Features
