@@ -104,7 +104,7 @@ export class Viewer {
     this.lighting = { ambient: 0.35, diffuse: 0.65, lightKit: true }
     this.meshes = new Map()      // part name -> Mesh | LineSegments
     this.edges = new Map()       // part name -> LineSegments of mesh edges
-    this.styles = new Map()      // part name -> { opacity, cull, edges }
+    this.styles = new Map()      // part name -> { opacity, cull, ... }
     this.bounds = null
     this.light = false           // light theme?
     this.frames = 0
@@ -280,6 +280,7 @@ export class Viewer {
       object.visible = visible[part.name] !== false
       this.meshes.set(part.name, object)
       this.scene.add(object)
+      if (part.edges?.length && object.isMesh) this._addEdges(object, part.edges)
       this.setStyle(part.name, styles[part.name] || this.styles.get(part.name) || {})
     }
     // A refetched stream part is a new material, so re-apply the animation.
@@ -407,7 +408,7 @@ export class Viewer {
     const mesh = this.meshes.get(name)
     if (mesh) mesh.visible = on
     const edge = this.edges.get(name)
-    if (edge) edge.visible = on && !!this.styles.get(name)?.edges
+    if (edge) edge.visible = on
   }
 
   /* Per-part appearance: all GPU state, no refetch.
@@ -417,7 +418,7 @@ export class Viewer {
    * without making its walls transparent. */
   setStyle(name, style) {
     const merged = {
-      opacity: 1, cull: false, edges: false, colored: true, solid: null,
+      opacity: 1, cull: false, colored: true, solid: null,
       ...(this.styles.get(name) || {}), ...style,
     }
     this.styles.set(name, merged)
@@ -437,32 +438,27 @@ export class Viewer {
     if (mesh.material.isLineMaterial) mesh.material.linewidth = merged.width ?? 1
     else if (mesh.isMesh) mesh.material.side = merged.cull ? THREE.BackSide : THREE.DoubleSide
     this._applyBlending(mesh)
-    this._applyEdges(name, merged.edges)
   }
 
-  /* Mesh edges, client-side.
-   *
-   * `wireframe: true` would draw the *triangulation*, not the mesh -- every
-   * quad crossed by a diagonal. EdgesGeometry suppresses edges between coplanar
-   * faces, so a triangulated quad loses its diagonal and the real cell grid
-   * comes back. The honest caveat: that only holds on flat cells. On a smoothly
-   * curved surface genuine mesh edges are near-coplanar and vanish too, which
-   * is why the *slice* gets its edges from the server's crinkle extraction
-   * instead of from here. Room walls are flat, so for the shell this is right
-   * and free -- no round trip, where the Trame path had none either (it was an
-   * actor property, which three.js has no equivalent of). */
-  _applyEdges(name, on) {
-    const mesh = this.meshes.get(name)
-    if (!on || !mesh?.isMesh) { this._removeEdges(name); return }
-    if (this.edges.has(name)) { this.edges.get(name).visible = mesh.visible; return }
+  /* The cell edges the server sent, drawn on the mesh's own positions. Only
+   * the server can tell a cell edge from the diagonal of a split quad: both
+   * are coplanar, so EdgesGeometry drops the whole grid on a flat wall. */
+  _addEdges(mesh, edges) {
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', mesh.geometry.getAttribute('position'))
+    geometry.setIndex(new THREE.BufferAttribute(edges, 1))
     const edge = new THREE.LineSegments(
-      new THREE.EdgesGeometry(mesh.geometry, 1),
+      geometry,
       new THREE.LineBasicMaterial({ color: this.light ? 0x9aa1ad : 0x40464f }),
     )
-    edge.name = `${name}-edges`
-    edge.renderOrder = (RENDER_ORDER[name] ?? 1) + 0.5
+    // Pushes the faces back so the coplanar edges win the depth test.
+    mesh.material.polygonOffset = true
+    mesh.material.polygonOffsetFactor = 1
+    mesh.material.polygonOffsetUnits = 1
+    edge.name = `${mesh.name}-edges`
+    edge.renderOrder = (RENDER_ORDER[mesh.name] ?? 1) + 0.5
     edge.visible = mesh.visible
-    this.edges.set(name, edge)
+    this.edges.set(mesh.name, edge)
     this.scene.add(edge)
   }
 
@@ -839,6 +835,7 @@ export class Viewer {
       colored: mesh.material.uniforms?.uColored?.value ?? null,
       hasScalar: mesh.material.uniforms?.uHasScalar?.value ?? null,
       lineWidth: mesh.material.isLineMaterial ? mesh.material.linewidth : null,
+      edges: (this.edges.get(name)?.geometry.index.count ?? 0) / 2,
     }
   }
 

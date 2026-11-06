@@ -65,6 +65,7 @@ PART_INPUTS = {
     "boundary": [
         "patches", "field", "component", "cell_data", "surface_clip",
         {"when": {"surface_clip": "1"}, "keys": ["plane_axis", "plane_coord"]},
+        "boundary_edges",
     ],
     "slice": ["field", "component", "cell_data", "slice_edges",
               "plane_axis", "plane_coord"],
@@ -370,21 +371,24 @@ class SceneSource:
         source = pipe.surface_clip if clip else pipe.surface_input
         source.Update()
         return wire.surface_part("boundary", source.GetOutput(), COLOR_ARRAY,
-                                 cell_scalars=_flag(ctx["query"], "cell_data"))
+                                 cell_scalars=_flag(ctx["query"], "cell_data"),
+                                 edges=_flag(ctx["query"], "boundary_edges"))
 
     def _part_slice(self, ctx):
         """The cut plane. With the mesh on it becomes a *crinkle* slice -- the
         whole cells the plane passes through, i.e. the true mesh layer, rather
         than the flat triangulated cut."""
         pipe = self.pipeline
-        if _flag(ctx["query"], "slice_edges"):
+        crinkle = _flag(ctx["query"], "slice_edges")
+        if crinkle:
             pipe.crinkle_surface.Update()
             poly = pipe.crinkle_surface.GetOutput()
         else:
             pipe.cutter.Update()
             poly = pipe.cutter.GetOutput()
         return wire.surface_part("slice", poly, COLOR_ARRAY,
-                                 cell_scalars=_flag(ctx["query"], "cell_data"))
+                                 cell_scalars=_flag(ctx["query"], "cell_data"),
+                                 edges=crinkle)
 
     def _part_iso(self, ctx):
         # Isovalues were set in scene(); contour_normals gives us normals for

@@ -72,6 +72,7 @@ export function initialRequest(meta) {
     plane: { x: meta.centre[0], y: meta.centre[1], z: meta.centre[2] },
     surface_clip: false,
     slice_edges: false,
+    boundary_edges: false,
     // '' = the isosurface follows the colour field; a name locks it to that
     // field, so recolouring no longer moves the surface.
     contour_field: '',
@@ -108,7 +109,7 @@ export function initialAppearance(theme) {
       // `colored` is per part, and the defaults are Niklas's: the shell is a
       // neutral grey so the slice inside it reads, everything else is coloured
       // by the field. `solid` is the colour used when colouring is off.
-      boundary: { opacity: 1, cull: true, edges: false, colored: false, solid: '#b8c0cc' },
+      boundary: { opacity: 1, cull: true, colored: false, solid: '#b8c0cc' },
       slice: { opacity: 1, colored: true },
       iso: { opacity: 0.35, colored: true, solid: '#b8c0cc' },
       stream: { opacity: 1, colored: true, solid: '#ffffff' },

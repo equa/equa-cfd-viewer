@@ -646,6 +646,42 @@ def main():
             wait_idle(page, scene)
             page.keyboard.press("Escape")
 
+            # ------------------------------------------------ mesh edges
+            # Only the server knows cell edges from the diagonals of split cells,
+            # so both toggles fetch; neither may draw a diagonal.
+            print("\nmesh edges: the cell grid, not the triangulation")
+            page.click(ctl("tool-boundary"))
+            wait_idle(page, scene)
+            n = len(scene)
+            page.click(ctl("surface-edges"))
+            wait_idle(page, scene)
+            info = page.evaluate("window.__viz.partInfo('boundary')")
+            check("boundary mesh edges fetch once", len(scene) - n == 1,
+                  f"{len(scene) - n} request(s)")
+            check("boundary draws its cell edges", info["edges"] > 0, f"{info['edges']} edges")
+            check("and no triangle diagonals", info["edges"] < info["triangles"] * 1.5,
+                  f"{info['edges']} edges on {info['triangles']} triangles")
+            shot(page, out / "04b-mesh-edges.png")
+            page.click(ctl("surface-edges"))
+            wait_idle(page, scene)
+            check("boundary edges go away",
+                  page.evaluate("window.__viz.partInfo('boundary')")["edges"] == 0)
+
+            page.click(ctl("tool-cutplane"))
+            wait_idle(page, scene)
+            page.click(ctl("slice-edges"))
+            wait_idle(page, scene)
+            info = page.evaluate("window.__viz.partInfo('slice')")
+            check("crinkle slice draws its cell edges", info["edges"] > 0,
+                  f"{info['edges']} edges")
+            shot(page, out / "04c-crinkle-edges.png")
+            page.click(ctl("slice-edges"))
+            wait_idle(page, scene)
+            check("plain slice has none",
+                  page.evaluate("window.__viz.partInfo('slice')")["edges"] == 0)
+            page.click(ctl("tool-boundary"))
+            wait_idle(page, scene)
+
             # ------------------------------------------------ eye toggles
             print("\nvisibility, and the part cache")
             wait_idle(page, scene)

@@ -26,8 +26,8 @@ const tagged = (text, kind) => (
  * - **Line width** is not `lineWidth`: WebGL caps it at 1, so the Trame app's
  *   sliders did nothing. Streamlines get thick as tubes; the geometry draws
  *   with three.js `LineSegments2`, whose width is a pixel uniform.
- * - **Mesh edges on the shell** became a client control (EdgesGeometry), so it
- *   no longer costs a round trip.
+ * - **Mesh edges** come from the server: only it knows which triangle edges
+ *   are cell edges and which are diagonals of a split cell.
  * - **Opacity** everywhere is a uniform, hence live.
  */
 
@@ -159,9 +159,9 @@ export function BoundaryTool({ meta, request, setRequest, style, setStyle }) {
       <Switch
         mt={6}
         size="xs"
-        label={tagged('Mesh edges', 'client')}
-        checked={style.edges ?? false}
-        onChange={(e) => setStyle({ edges: e.currentTarget.checked })}
+        label={tagged('Mesh edges', 'server')}
+        checked={request.boundary_edges}
+        onChange={(e) => setRequest({ boundary_edges: e.currentTarget.checked })}
         data-ctl="surface-edges"
       />
       <Switch

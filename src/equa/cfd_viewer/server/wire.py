@@ -33,7 +33,7 @@ ALIGN = 4  # keep every buffer 4-byte aligned so typed-array views are valid
 class Part:
     """One drawable: vertices, an index buffer, and the scalars to colour by."""
 
-    def __init__(self, name, mode, attributes, index, ranges=None):
+    def __init__(self, name, mode, attributes, index, ranges=None, edges=None):
         self.name = name
         self.mode = mode  # "triangles" | "lines"
         self.attributes = attributes  # name -> (N, C) float32 array
@@ -46,6 +46,9 @@ class Part:
         # s2: 10.3 MB against 1.13 MB gzipped). Costs ~1.5 kB against 214 kB of
         # positions.
         self.ranges = ranges
+        # Flat uint32 pairs into the same vertices: the cell edges from before
+        # triangulation, which the client cannot tell from triangle diagonals.
+        self.edges = edges
 
     @property
     def n_vertices(self):
@@ -128,6 +131,34 @@ def _line_indices(polydata):
     return np.column_stack([conn[at], conn[at + 1]]).ravel().astype(np.uint32, copy=False)
 
 
+def _cell_edges(polydata):
+    """Each polygon's own edges, deduplicated, as flat uint32 pairs.
+
+    Read before triangulation; vtkTriangleFilter and vtkPolyDataNormals
+    (SplittingOff) keep the point ids, so the pairs index the shipped vertices.
+    """
+    polys = polydata.GetPolys()
+    if polys is None or polys.GetNumberOfCells() == 0:
+        return np.zeros(0, dtype=np.uint32)
+    offsets = vtk_to_numpy(polys.GetOffsetsArray())
+    conn = vtk_to_numpy(polys.GetConnectivityArray())
+    sizes = np.diff(offsets)
+    nxt = np.arange(1, conn.size + 1)
+    nxt[offsets[1:][sizes > 0] - 1] = offsets[:-1][sizes > 0]
+    pairs = np.sort(np.column_stack([conn, conn[nxt]]), axis=1)
+    pairs = np.unique(pairs[pairs[:, 0] != pairs[:, 1]], axis=0)
+    return pairs.ravel().astype(np.uint32)
+
+
+def _remap_edges(edges, index, n_points):
+    """Point-id edges onto a de-indexed mesh, via each point's first copy."""
+    first = np.full(n_points, -1, dtype=np.int64)
+    order = np.arange(index.size)
+    first[index[::-1]] = order[::-1]
+    pairs = first[edges.reshape(-1, 2)]
+    return pairs[(pairs >= 0).all(axis=1)].ravel().astype(np.uint32)
+
+
 def _extra_attrs(out, extras):
     """Pull named 1-component point arrays out as float32 attributes.
 
@@ -179,7 +210,7 @@ def _de_index_cells(out, attrs, index, scalar_array):
 
 
 def surface_part(name, polydata, scalar_array, normals=True, extras=None,
-                 cell_scalars=False):
+                 cell_scalars=False, edges=False):
     """A lit, scalar-coloured triangle mesh.
 
     Triangulated here because the OpenFOAM reader emits quads and general
@@ -219,9 +250,13 @@ def surface_part(name, polydata, scalar_array, normals=True, extras=None,
         attrs["scalar"] = _f32(vtk_to_numpy(scalars), 1)
     attrs.update(_extra_attrs(out, extras))
     index = _triangle_indices(out)
+    cell_edges = _cell_edges(polydata) if edges else None
     if cell_scalars:
+        point_index = index
         attrs, index = _de_index_cells(out, attrs, index, scalar_array)
-    return Part(name, "triangles", attrs, index)
+        if cell_edges is not None and index is not point_index:
+            cell_edges = _remap_edges(cell_edges, point_index, out.GetNumberOfPoints())
+    return Part(name, "triangles", attrs, index, edges=cell_edges)
 
 
 def line_part(name, polydata, scalar_array, extras=None):
@@ -276,6 +311,11 @@ def pack(parts, meta):
             entry["components"] = 2          # (start, count) per polyline
             spec["ranges"] = entry
             spec["counts"]["polylines"] = int(part.ranges.size) // 2
+        if part.edges is not None:
+            entry = add(part.edges)
+            entry["type"] = "u32"
+            spec["edges"] = entry
+            spec["counts"]["edges"] = int(part.edges.size) // 2
         header_parts.append(spec)
 
     header = dict(meta)
@@ -311,5 +351,6 @@ def unpack(blob):
             "attributes": {k: view(v) for k, v in spec["attributes"].items()},
             "index": view(spec["index"]),
             "ranges": view(spec["ranges"]) if "ranges" in spec else None,
+            "edges": view(spec["edges"]) if "edges" in spec else None,
         })
     return header, parts

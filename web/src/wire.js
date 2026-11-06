@@ -31,6 +31,8 @@ export function decodeScene(buffer) {
     // polylines do NOT tile the point array -- the tracer leaves orphan points
     // between them, and inferring a length from the next start swallowed those.
     ranges: spec.ranges ? view(spec.ranges) : null,
+    // Cell edges as vertex pairs, sent only when asked for (mesh edges, crinkle).
+    edges: spec.edges ? view(spec.edges) : null,
     attributes: Object.fromEntries(
       Object.entries(spec.attributes)
         .map(([k, e]) => [k, { array: view(e), components: e.components }]),
