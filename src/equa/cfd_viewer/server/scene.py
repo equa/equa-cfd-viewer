@@ -500,7 +500,7 @@ class SceneSource:
 
     def _part_geometry(self, ctx):
         """Building geometry from ``constant/triSurface/building*.obj`` as flat
-        lines: feature edges (sharp + boundary, the architectural outline) or
+        lines: feature edges (sharp, boundary and between OBJ groups) or
         wireframe (every edge). Carries no field, so it ships without scalars
         and the client draws it in a neutral colour."""
         pipe = self.pipeline
@@ -509,6 +509,4 @@ class SceneSource:
         mode = ctx["query"].get("geometry_mode") or "features"
         # Mode is a *filter parameter*, never an input or actor swap -- see the
         # geometry note in CLAUDE.md for the three ways that went wrong.
-        pipe.update_geometry(True, mode, 1.0, 1.0)
-        pipe.geometry_edges.Update()
-        return wire.line_part("geometry", pipe.geometry_edges.GetOutput(), COLOR_ARRAY)
+        return wire.line_part("geometry", pipe.geometry_lines(mode), COLOR_ARRAY)

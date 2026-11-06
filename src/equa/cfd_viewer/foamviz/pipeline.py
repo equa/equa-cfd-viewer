@@ -38,6 +38,42 @@ AXES = ["x", "y", "z"]
 _AXIS_NORMAL = {"x": (1, 0, 0), "y": (0, 1, 0), "z": (0, 0, 1)}
 
 
+
+def _group_edges(polydata):
+    """Lines on the edges shared by faces of different OBJ groups, or None.
+
+    vtkOBJReader numbers the ``g`` groups in the ``GroupIds`` cell array."""
+    ids = polydata.GetCellData().GetArray("GroupIds")
+    polys = polydata.GetPolys()
+    if ids is None or polys.GetNumberOfCells() == 0:
+        return None
+    first = polydata.GetNumberOfVerts() + polydata.GetNumberOfLines()
+    offsets = vtk_to_numpy(polys.GetOffsetsArray()).astype(np.int64)
+    conn = vtk_to_numpy(polys.GetConnectivityArray()).astype(np.int64)
+    sizes = np.diff(offsets)
+    group = vtk_to_numpy(ids)[first:first + sizes.size][np.repeat(np.arange(sizes.size), sizes)]
+    nxt = np.arange(1, conn.size + 1)
+    nxt[offsets[1:] - 1] = offsets[:-1]
+    pairs = np.sort(np.stack([conn, conn[nxt]], axis=1), axis=1)
+    edges, inverse = np.unique(pairs, axis=0, return_inverse=True)
+    inverse = inverse.ravel()
+    lo = np.full(len(edges), np.inf)
+    hi = np.full(len(edges), -np.inf)
+    np.minimum.at(lo, inverse, group)
+    np.maximum.at(hi, inverse, group)
+    edges = edges[lo != hi]
+    if edges.size == 0:
+        return None
+    lines = vtk.vtkCellArray()
+    lines.SetData(
+        numpy_to_vtk(np.arange(0, 2 * len(edges) + 1, 2), deep=True, array_type=vtk.VTK_ID_TYPE),
+        numpy_to_vtk(edges.ravel(), deep=True, array_type=vtk.VTK_ID_TYPE),
+    )
+    out = vtk.vtkPolyData()
+    out.SetPoints(polydata.GetPoints())
+    out.SetLines(lines)
+    return out
+
 class FoamPipeline:
     """Owns the renderer and every representation drawn into it."""
 
@@ -708,6 +744,23 @@ class FoamPipeline:
         prop = self.geometry_actor.GetProperty()
         prop.SetOpacity(float(opacity))
         prop.SetLineWidth(float(line_width))
+
+    def geometry_lines(self, mode):
+        """The geometry's lines for *mode*. Feature edges also take the edges
+        between OBJ groups: a window flush in its wall has no angle to show it."""
+        self.update_geometry(True, mode, 1.0, 1.0)
+        self.geometry_edges.Update()
+        lines = self.geometry_edges.GetOutput()
+        if mode == "wireframe":
+            return lines
+        groups = _group_edges(self.geometry_reader.GetOutput())
+        if groups is None:
+            return lines
+        append = vtk.vtkAppendPolyData()
+        append.AddInputData(lines)
+        append.AddInputData(groups)
+        append.Update()
+        return append.GetOutput()
 
     def update_surface(self, visible, colored, opacity, edges, clip, cull):
         self.surface_actor.SetVisibility(1 if visible else 0)
