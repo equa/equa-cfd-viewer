@@ -1,3 +1,9 @@
+## [1.0.0-beta.17](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2026-11-06)
+
+### Bug Fixes
+
+* **web:** leave the axes gizmo out of screenshots ([7835761](https://github.com/equa/equa-cfd-viewer/commit/7835761f2537819842a848180db52351335decc5))
+
 ## [1.0.0-beta.16](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2026-11-06)
 
 ### Features
