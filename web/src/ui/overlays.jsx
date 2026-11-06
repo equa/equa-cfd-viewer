@@ -46,13 +46,6 @@ export function Legend({ lut, range, bands, title }) {
           {ticks.map((t, i) => <span key={i}>{t}</span>)}
         </div>
       </div>
-      {/* Decodes the in-scene triad: the arrow colours are the only thing
-          naming the axes, so say which is which. */}
-      <div className="axis-key">
-        <span className="ax-x">X</span>
-        <span className="ax-y">Y</span>
-        <span className="ax-z">Z</span>
-      </div>
     </div>
   )
 }

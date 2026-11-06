@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
+import { ViewHelper } from 'three/examples/jsm/helpers/ViewHelper.js'
 import { FRAG, FRAG_LINE, VERT, VERT_LINE } from './shaders.js'
 import { buildTubeGeometry } from './tube.js'
 
@@ -24,7 +25,6 @@ const RENDER_ORDER = {
   geometry: 0, slice: 1, iso: 2, stream: 3, glyph: 4, boundary: 5,
 }
 
-const TRIAD_COLOURS = [0xe64d4d, 0x66d966, 0x598cf2]  // X red, Y green, Z blue
 const AXES = ['x', 'y', 'z']
 
 export class Viewer {
@@ -108,7 +108,10 @@ export class Viewer {
     this.frames = 0
     this.fps = 0
 
-    this._buildTriad()
+    // three.js's own axes gizmo, drawn in a corner viewport after the scene.
+    this.axes = new ViewHelper(this.camera, this.renderer.domElement)
+    this.axes.location = { top: 12, right: 12, bottom: null, left: null }
+    this.axes.setLabels('X', 'Y', 'Z')
     this._buildOutline()
     this.setTheme(false)
     this._resize()
@@ -121,6 +124,7 @@ export class Viewer {
     this._observer?.disconnect()
     this._disposeAll()
     this.controls.dispose()
+    this.axes.dispose()
     this.renderer.dispose()
     this.renderer.domElement.remove()
   }
@@ -151,7 +155,7 @@ export class Viewer {
       this.shared.uCometPhase.value = (this.shared.uCometPhase.value + dt * this.comets.speed) % period
     }
     this.controls.update()
-    this.renderer.render(this.scene, this.camera)
+    this._draw()
     this.frames += 1
     if (!this._t0) this._t0 = now
     if (now - this._t0 >= 500) {
@@ -162,7 +166,7 @@ export class Viewer {
   }
 
   stats() {
-    const r = this.renderer.info.render
+    const r = this.drawn ?? { triangles: 0, calls: 0 }
     return { fps: this.fps, triangles: r.triangles, calls: r.calls }
   }
 
@@ -635,7 +639,6 @@ export class Viewer {
     )
     this.camera.updateProjectionMatrix()
     this.controls.update()
-    this._placeTriad(bounds, diagonal)
   }
 
   /* Look along a named axis, or the iso three-quarter view. Z is up -- these are
@@ -700,46 +703,24 @@ export class Viewer {
     return true
   }
 
-  // -- orientation triad ------------------------------------------------
-
-  /* Three RGB axis arrows, as ordinary geometry at the domain corner nearest
-   * the default camera -- at the far corner an opaque slice hides two of the
-   * three. Same colours and same anchor as the Trame app, so the legend's X/Y/Z
-   * key reads the same in both. */
-  _buildTriad() {
-    this.triad = new THREE.Group()
-    this.triad.name = 'triad'
-    TRIAD_COLOURS.forEach((colour, i) => {
-      const geometry = new THREE.CylinderGeometry(0.03, 0.03, 1, 12)
-      geometry.translate(0, 0.5, 0)  // base at the origin, pointing +Y
-      const cone = new THREE.ConeGeometry(0.09, 0.25, 12)
-      cone.translate(0, 1.1, 0)
-      const arrow = new THREE.Group()
-      const material = new THREE.MeshBasicMaterial({ color: colour })
-      arrow.add(new THREE.Mesh(geometry, material), new THREE.Mesh(cone, material))
-      // Rotate the +Y-aligned arrow onto its own axis.
-      if (AXES[i] === 'x') arrow.rotation.z = -Math.PI / 2
-      if (AXES[i] === 'z') arrow.rotation.x = Math.PI / 2
-      this.triad.add(arrow)
-    })
-    this.scene.add(this.triad)
-  }
-
-  _placeTriad(bounds, diagonal) {
-    const [, x1, y0, , , z1] = bounds
-    this.triad.position.set(x1, y0, z1)
-    this.triad.scale.setScalar(0.1 * diagonal)
-  }
-
-  setTriadVisible(on) { this.triad.visible = !!on }
-
   // -- output -----------------------------------------------------------
 
   /* Render and read the canvas in the same tick. With preserveDrawingBuffer the
    * colour buffer survives the present, so this is reliable rather than
    * driver-dependent. */
-  screenshot() {
+  _draw() {
     this.renderer.render(this.scene, this.camera)
+    // Copied before the gizmo's render resets the renderer's counts.
+    const { triangles, calls } = this.renderer.info.render
+    this.drawn = { triangles, calls }
+    // A GL clear ignores the viewport: left on, it would wipe the scene.
+    this.renderer.autoClear = false
+    this.axes.render(this.renderer)
+    this.renderer.autoClear = true
+  }
+
+  screenshot() {
+    this._draw()
     return this.renderer.domElement.toDataURL('image/png')
   }
 

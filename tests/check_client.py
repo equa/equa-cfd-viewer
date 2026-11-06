@@ -89,8 +89,8 @@ def red_pixels(page):
 
     Used to prove the cut-plane frame actually appears during a drag, rather
     than trusting that the code path ran. It is NOT an absolute measure: the
-    triad's X arrow and the legend's red X key are also red and also inside the
-    clip box, so callers must compare against a baseline taken before the drag.
+    axes gizmo's X arm is also red and also inside the clip box, so callers
+    must compare against a baseline taken before the drag.
     """
     box = page.locator(".stage canvas").bounding_box()
     image = Image.open(io.BytesIO(page.screenshot(clip=box))).convert("RGB")
@@ -524,7 +524,6 @@ def main():
             ]:
                 check(label, page.locator(ctl(name)).count() == 1)
             check("legend present", page.locator(".legend-bar").count() == 1)
-            check("axis key present", page.locator(".axis-key .ax-z").count() == 1)
             check("HUD present", page.locator(".hud").count() == 1)
 
             # ------------------------------------------- client-side controls
@@ -725,7 +724,7 @@ def main():
             page.click(ctl("tool-cutplane"))
             wait_idle(page, scene)
             n = len(scene)
-            baseline_red = red_pixels(page)      # triad X arrow + legend X key
+            baseline_red = red_pixels(page)      # the axes gizmo's X arm
             release = slider_drag(page, ctl("plane-slider"))
             mid_drag_red = red_pixels(page)
             during = len(scene) - n

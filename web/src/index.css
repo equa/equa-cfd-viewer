@@ -177,12 +177,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* The in-scene triad's arrow colours are the only thing naming the axes, so the
-   key repeats them exactly (see Viewer TRIAD_COLOURS). */
-.axis-key { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; font-weight: 700; }
-.axis-key .ax-x { color: #e64d4d; }
-.axis-key .ax-y { color: #66d966; }
-.axis-key .ax-z { color: #598cf2; }
 
 /* ── bottom bar ──────────────────────────────────────────── */
 
