@@ -1,3 +1,9 @@
+## [1.0.0-beta.12](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-11-06)
+
+### Features
+
+* **web:** opacity by value per part ([534f9a1](https://github.com/equa/equa-cfd-viewer/commit/534f9a142bbcf8a955d0c8cd71fcaf40f5bdb653))
+
 ## [1.0.0-beta.11](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-11-06)
 
 ### Bug Fixes
