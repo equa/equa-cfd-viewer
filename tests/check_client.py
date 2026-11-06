@@ -752,6 +752,40 @@ def main():
                   not page.locator(ctl("apply-stream")).is_enabled())
             shot(page, out / "04-streamlines.png")
 
+            # ------------------------------------------- frozen seed plane
+            print("\nstreamline seeds stay put until Re-seed")
+            if page.locator(ctl("stream-reseed")).is_enabled():
+                page.click(ctl("stream-reseed"))   # the cut plane was moved above
+                wait_idle(page, scene)
+            check("Re-seed is disabled while seeds sit on the cut plane",
+                  not page.locator(ctl("stream-reseed")).is_enabled())
+            seeded = page.evaluate("window.__viz.partInfo('stream')")["vertices"]
+            page.click(ctl("tool-cutplane"))
+            page.fill(ctl("plane-z"), "1.0")
+            page.click(ctl("plane-apply"))
+            wait_idle(page, scene)
+            check("moving the cut plane does not re-trace",
+                  "stream" not in parts_of(scene[-1]), f"asked for {sorted(parts_of(scene[-1]))}")
+            check("the streamlines are unchanged",
+                  page.evaluate("window.__viz.partInfo('stream')")["vertices"] == seeded)
+            page.click(ctl("tool-stream"))
+            n = len(scene)
+            page.click(ctl("show-stream"))
+            page.wait_for_timeout(300)
+            page.click(ctl("show-stream"))
+            settle(page, scene)
+            check("hiding and showing keeps them, from cache", len(scene) == n
+                  and page.evaluate("window.__viz.partInfo('stream')")["vertices"] == seeded,
+                  f"{len(scene) - n} request(s)")
+            check("Re-seed is enabled once the cut plane moved",
+                  page.locator(ctl("stream-reseed")).is_enabled())
+            page.click(ctl("stream-reseed"))
+            wait_idle(page, scene)
+            check("Re-seed re-traces once", len(scene) - n == 1
+                  and "stream" in parts_of(scene[-1]), f"{len(scene) - n} request(s)")
+            check("the panel names the new seed plane",
+                  "z = 1.00" in page.locator(ctl("stream-seed-plane")).inner_text())
+
             # ------------------------------------ tubes, built in the browser
             print("\nstreamline tubes (client-built)")
             lines = page.evaluate("window.__viz.partInfo('stream')")

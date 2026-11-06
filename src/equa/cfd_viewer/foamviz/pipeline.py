@@ -96,6 +96,7 @@ class FoamPipeline:
         self.surface_input.AddInputData(vtk.vtkPolyData())  # append needs >=1 input
         empty = vtk.vtkUnstructuredGrid()
         self.cutter.SetInputData(empty)
+        self.seed_cutter.SetInputData(empty)
         self.crinkle.SetInputData(empty)
         self.contour.SetInputData(empty)
         self.tracer.SetInputData(empty)
@@ -197,10 +198,15 @@ class FoamPipeline:
         self.contour_mapper.SetInputConnection(self.contour_normals.GetOutputPort())
 
         # --- streamlines ---------------------------------------------------
+        # Seeds come off a cutter of their own, so the streamlines can stay
+        # where they were seeded while the cut plane moves on. update_plane
+        # moves both; the web server then pins this one (update_seed_plane).
+        self.seed_cutter = vtk.vtkCutter()
+        self.seed_cutter.SetCutFunction(vtk.vtkPlane())
         self.stream_seeds = vtk.vtkMaskPoints()
         self.stream_seeds.RandomModeOn()
         self.stream_seeds.SetRandomModeType(1)  # spatially even, not clumped
-        self.stream_seeds.SetInputConnection(self.cutter.GetOutputPort())
+        self.stream_seeds.SetInputConnection(self.seed_cutter.GetOutputPort())
 
         self.tracer = vtk.vtkStreamTracer()
         self.tracer.SetSourceConnection(self.stream_seeds.GetOutputPort())
@@ -408,7 +414,7 @@ class FoamPipeline:
         return (
             self.surface_input, self.surface_clip,
             self.cutter, self.crinkle, self.crinkle_surface,
-            self.contour, self.contour_normals,
+            self.contour, self.contour_normals, self.seed_cutter,
             self.stream_seeds, self.tracer, self.stream_tube,
             self.glyph_probe, self.glyph_grid, self.glyph_seeds, self.glyph,
             self.geometry_reader, self.geometry_edges,
@@ -504,6 +510,7 @@ class FoamPipeline:
             self.surface_input.AddInputData(vtk.vtkPolyData())
 
         self.cutter.SetInputData(case.internal)
+        self.seed_cutter.SetInputData(case.internal)
         self.crinkle.SetInputData(case.internal)
         self.contour.SetInputData(case.internal)
         self.tracer.SetInputData(case.internal)
@@ -664,18 +671,23 @@ class FoamPipeline:
         eps = (hi - lo) * 1e-3
         return min(max(coord, lo + eps), hi - eps)
 
-    def update_plane(self, axis, coord):
-        """Position the shared cut/clip plane at world *coord* along *axis*."""
+    def _place(self, planes, axis, coord):
         xmin, xmax, ymin, ymax, zmin, zmax = self.case.bounds()
-        pos = self._clamp_to_axis(axis, coord)
-
         origin = [(xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2]
-        origin["xyz".index(axis)] = pos
-        normal = _AXIS_NORMAL[axis]
-
-        for plane in (self.cutter.GetCutFunction(), self.surface_clip.GetClipFunction()):
+        origin["xyz".index(axis)] = self._clamp_to_axis(axis, coord)
+        for plane in planes:
             plane.SetOrigin(*origin)
-            plane.SetNormal(*normal)
+            plane.SetNormal(*_AXIS_NORMAL[axis])
+
+    def update_plane(self, axis, coord):
+        """Position the shared cut/clip plane, and the seed plane with it, at
+        world *coord* along *axis*."""
+        self._place((self.cutter.GetCutFunction(), self.surface_clip.GetClipFunction(),
+                     self.seed_cutter.GetCutFunction()), axis, coord)
+
+    def update_seed_plane(self, axis, coord):
+        """Pin the streamline seed plane apart from the cut plane."""
+        self._place((self.seed_cutter.GetCutFunction(),), axis, coord)
 
     def update_geometry(self, visible, mode, opacity, line_width):
         """Building geometry as flat lines: feature edges (sharp + boundary) or

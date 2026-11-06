@@ -70,6 +70,9 @@ export function initialRequest(meta) {
     // the Trame app reworked its way to this and it is worth inheriting.
     plane_axis: 'z',
     plane: { x: meta.centre[0], y: meta.centre[1], z: meta.centre[2] },
+    // Where the streamlines are seeded. Starts at the initial cut plane and
+    // moves only on Re-seed: hiding, showing or moving the cut plane keeps it.
+    stream_plane: { axis: 'z', coord: meta.centre[2] },
     surface_clip: false,
     slice_edges: false,
     boundary_edges: false,
@@ -134,13 +137,15 @@ export function initialAppearance(theme) {
  * active coordinate is resolved here, so `plane_coord` is the single number the
  * server sees and the UI keeps its three-field memory. */
 export function toQuery(request) {
-  const { plane, patches, ...rest } = request
+  const { plane, patches, stream_plane, ...rest } = request
   return {
     ...Object.fromEntries(Object.entries(rest).map(([k, v]) => [
       k, typeof v === 'boolean' ? (v ? '1' : '0') : v,
     ])),
     patches: (patches || []).join(','),
     plane_coord: plane[request.plane_axis],
+    stream_plane_axis: stream_plane.axis,
+    stream_plane_coord: stream_plane.coord,
   }
 }
 

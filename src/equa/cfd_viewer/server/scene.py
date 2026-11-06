@@ -73,14 +73,14 @@ PART_INPUTS = {
     # it follows the colour field, so `field`/`component` stay in the list.
     "iso": ["field", "component", "contour_field", "contour_count",
             "contour_value", "contour_min", "contour_max"],
-    # The stream seeds are masked points off the cutter output, so the plane
-    # always matters here -- no condition.
+    # Seeded on a plane of their own, not the cut plane: the streamlines stay
+    # put while the cut plane moves, until the client re-seeds.
     #
     # `stream_tubes` and `stream_radius` are deliberately ABSENT: tubes are built
     # in the browser from these same lines (see _part_stream), so switching
     # representation or changing the width re-extracts nothing.
     "stream": ["vector_field", "stream_seeds", "stream_length",
-               "plane_axis", "plane_coord", "field", "component"],
+               "stream_plane_axis", "stream_plane_coord", "field", "component"],
     "glyph": [
         "vector_field", "glyph_source", "glyph_count", "glyph_scale",
         "glyph_scale_by", "field", "component",
@@ -464,6 +464,9 @@ class SceneSource:
         """
         pipe = self.pipeline
         q = ctx["query"]
+        # Without a seed plane (an older client) seeds follow the cut plane.
+        pipe.update_seed_plane(q.get("stream_plane_axis") or ctx["axis"],
+                               _num(q, "stream_plane_coord", ctx["coord"]))
         pipe.update_streamlines(
             True,
             int(_num(q, "stream_seeds", 200)),

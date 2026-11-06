@@ -342,6 +342,9 @@ export function StreamTool({
     stream_seeds: request.stream_seeds,
     stream_length: request.stream_length,
   }, (draft) => setRequest(draft))
+  const seed = request.stream_plane
+  const cut = { axis: request.plane_axis, coord: request.plane[request.plane_axis] }
+  const moved = seed.axis !== cut.axis || seed.coord !== cut.coord
 
   return (
     <>
@@ -385,6 +388,20 @@ export function StreamTool({
         data-ctl="apply-stream"
       >
         Apply
+      </Button>
+      <Text size="xs" c="dimmed" mt="sm" data-ctl="stream-seed-plane">
+        Seeded at {seed.axis} = {Number(seed.coord).toFixed(2)} m
+      </Text>
+      <Button
+        fullWidth
+        mt={6}
+        size="xs"
+        variant="light"
+        disabled={!moved}
+        onClick={() => setRequest({ stream_plane: cut })}
+        data-ctl="stream-reseed"
+      >
+        Re-seed at cut plane
       </Button>
 
       <Divider my="sm" />
