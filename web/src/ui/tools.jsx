@@ -469,9 +469,9 @@ export function StreamTool({
         <div style={{ marginTop: 8 }}>
           <LabelledSlider
             label="Speed"
-            min={0.05}
-            max={2}
-            step={0.05}
+            min={0.01}
+            max={0.5}
+            step={0.01}
             precision={2}
             live
             value={comets.speed}
