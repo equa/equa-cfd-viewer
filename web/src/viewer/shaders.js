@@ -32,6 +32,34 @@ export const VERT = /* glsl */`
     gl_Position = projectionMatrix * modelViewMatrix * vec4(placed, 1.0);
   }`
 
+/* One arrow mesh (along +X, length 1) instanced at every anchor the server
+ * sent. Size and length-by-magnitude are uniforms, so neither refetches. The
+ * scale is uniform in all three axes, as vtkGlyph3D's is. */
+export const VERT_GLYPH = /* glsl */`
+  attribute vec3 offset;
+  attribute vec3 vector;
+  attribute float scalar;
+  uniform float uGlyphSize;
+  uniform float uGlyphRef;
+  uniform float uScaleBy;
+  varying float vScalar;
+  varying float vTravel;
+  varying vec3 vNormal;
+  void main() {
+    float m = length(vector);
+    vec3 x = m > 0.0 ? vector / m : vec3(1.0, 0.0, 0.0);
+    vec3 up = abs(x.z) < 0.9 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+    vec3 y = normalize(cross(up, x));
+    mat3 turn = mat3(x, y, cross(x, y));
+    // A zero vector (a no-slip wall) has no direction to show: no arrow.
+    float size = m > 0.0 ? uGlyphSize * mix(1.0, m / uGlyphRef, uScaleBy) : 0.0;
+    vScalar = scalar;
+    vTravel = 0.0;
+    vNormal = normalize(normalMatrix * (turn * normal));
+    vec3 placed = offset + turn * (position * size);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(placed, 1.0);
+  }`
+
 export const VERT_LINE = /* glsl */`
   attribute float scalar;
   attribute float travel;

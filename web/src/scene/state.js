@@ -87,8 +87,6 @@ export function initialRequest(meta) {
     stream_length: 4.0,
     glyph_source: 'slice',
     glyph_count: 400,
-    glyph_scale: 1.0,
-    glyph_scale_by: false,
     geometry_mode: 'features',
   }
 }
@@ -113,7 +111,10 @@ export function initialAppearance(theme) {
       slice: { opacity: 1, opacityMap: false, colored: true, solid: '#b8c0cc' },
       iso: { opacity: 0.35, opacityMap: false, colored: false, solid: '#b8c0cc' },
       stream: { opacity: 1, opacityMap: false, colored: false, solid: '#ffffff' },
-      glyph: { opacity: 1, opacityMap: false, colored: true, solid: '#b8c0cc' },
+      // size and scaleBy are uniforms: the browser instances the arrows.
+      glyph: {
+        opacity: 1, opacityMap: false, colored: true, solid: '#b8c0cc', size: 1, scaleBy: false,
+      },
       geometry: { opacity: 1, width: 1 },
     },
     lighting: { ambient: 0.3, diffuse: 0.7, lightKit: true },

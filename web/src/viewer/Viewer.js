@@ -4,7 +4,8 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
 import { ViewHelper } from 'three/examples/jsm/helpers/ViewHelper.js'
-import { FRAG, FRAG_LINE, VERT, VERT_LINE } from './shaders.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { FRAG, FRAG_LINE, VERT, VERT_GLYPH, VERT_LINE } from './shaders.js'
 import { buildTubeGeometry } from './tube.js'
 
 /*
@@ -26,6 +27,20 @@ const RENDER_ORDER = {
 }
 
 const AXES = ['x', 'y', 'z']
+
+/* One arrow along +X, length 1, in vtkArrowSource's proportions (tip 0.35
+ * long, radius 0.1; shaft radius 0.03) so the arrows look as they did. */
+function arrowGeometry() {
+  const shaft = new THREE.CylinderGeometry(0.03, 0.03, 0.65, 12)
+  shaft.translate(0, 0.325, 0)
+  const tip = new THREE.ConeGeometry(0.1, 0.35, 12)
+  tip.translate(0, 0.825, 0)
+  const arrow = mergeGeometries([shaft, tip])
+  arrow.rotateZ(-Math.PI / 2)
+  shaft.dispose()
+  tip.dispose()
+  return arrow
+}
 
 export class Viewer {
   constructor(container) {
@@ -194,6 +209,13 @@ export class Viewer {
       uFlat: { value: new THREE.Color(0.72, 0.75, 0.80) },
       uHasScalar: { value: hasScalar ? 1 : 0 },
     })
+    if (mode === 'glyphs') {
+      Object.assign(uniforms, {
+        uGlyphSize: { value: 1 },
+        uGlyphRef: { value: 1 },
+        uScaleBy: { value: 0 },
+      })
+    }
     if (mode === 'lines') {
       return new THREE.ShaderMaterial({
         uniforms, vertexShader: VERT_LINE, fragmentShader: FRAG_LINE,
@@ -201,7 +223,7 @@ export class Viewer {
     }
     return new THREE.ShaderMaterial({
       uniforms,
-      vertexShader: VERT,
+      vertexShader: mode === 'glyphs' ? VERT_GLYPH : VERT,
       fragmentShader: FRAG,
       side: THREE.DoubleSide,
     })
@@ -250,6 +272,10 @@ export class Viewer {
         this._streamLines = part
       }
       this._removePart(part.name)
+      if (part.mode === 'points') {
+        this._addGlyphs(part, visible, styles)
+        continue
+      }
       const geometry = new THREE.BufferGeometry()
       for (const [name, attr] of Object.entries(part.attributes)) {
         geometry.setAttribute(name, new THREE.BufferAttribute(attr.array, attr.components))
@@ -290,6 +316,33 @@ export class Viewer {
     this._applyComets()
     if (header?.range) this.setRange(header.range[0], header.range[1])
     return header
+  }
+
+  /* Arrows: one arrow mesh instanced over the anchors the server sent. */
+  _addGlyphs(part, visible = {}, styles = {}) {
+    const arrow = arrowGeometry()
+    const geometry = new THREE.InstancedBufferGeometry()
+    geometry.setIndex(arrow.getIndex())
+    geometry.setAttribute('position', arrow.getAttribute('position'))
+    geometry.setAttribute('normal', arrow.getAttribute('normal'))
+    const { position, vector, scalar } = part.attributes
+    geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(position.array, 3))
+    geometry.setAttribute('vector', new THREE.InstancedBufferAttribute(vector.array, 3))
+    if (scalar) geometry.setAttribute('scalar', new THREE.InstancedBufferAttribute(scalar.array, 1))
+    geometry.instanceCount = position.array.length / 3
+    // The fastest arrow drawn sets full length, as the server did.
+    let ref = 0
+    const v = vector.array
+    for (let i = 0; i < v.length; i += 3) ref = Math.max(ref, Math.hypot(v[i], v[i + 1], v[i + 2]))
+    const mesh = new THREE.Mesh(geometry, this._material('glyphs', { hasScalar: !!scalar }))
+    mesh.material.uniforms.uGlyphRef.value = Math.max(ref, 1e-12)
+    mesh.frustumCulled = false   // its bounds are one arrow's, not the instances'
+    mesh.name = part.name
+    mesh.renderOrder = RENDER_ORDER[part.name] ?? 1
+    mesh.visible = visible[part.name] !== false
+    this.meshes.set(part.name, mesh)
+    this.scene.add(mesh)
+    this.setStyle(part.name, styles[part.name] || this.styles.get(part.name) || {})
   }
 
   /* Build the streamline tube from the line part and add it to the scene.
@@ -438,6 +491,13 @@ export class Viewer {
     if (u?.uFlat && merged.solid) u.uFlat.value.set(merged.solid)
     else if (!u?.uFlat && merged.solid && mesh.material.color) {
       mesh.material.color.set(merged.solid)   // the neutral line material
+    }
+    if (u?.uGlyphSize) {
+      // The server's old scale: 3.5 % of the domain diagonal at size 1.
+      const [x0, x1, y0, y1, z0, z1] = this.bounds || [0, 1, 0, 1, 0, 1]
+      const diagonal = Math.hypot(x1 - x0, y1 - y0, z1 - z0) || 1
+      u.uGlyphSize.value = 0.035 * diagonal * (merged.size ?? 1)
+      u.uScaleBy.value = merged.scaleBy ? 1 : 0
     }
     if (mesh.material.isLineMaterial) mesh.material.linewidth = merged.width ?? 1
     else if (mesh.isMesh) mesh.material.side = merged.cull ? THREE.BackSide : THREE.DoubleSide
@@ -626,6 +686,7 @@ export class Viewer {
 
   frameAll(bounds) {
     this.bounds = bounds
+    if (this.meshes.has('glyph')) this.setStyle('glyph', {})
     const [x0, x1, y0, y1, z0, z1] = bounds
     const centre = new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)
     const diagonal = Math.hypot(x1 - x0, y1 - y0, z1 - z0) || 1
@@ -796,24 +857,29 @@ export class Viewer {
     // Lines carry 2 indices per primitive, triangles 3 -- dividing by 3
     // regardless reported nonsense for the streamline part. A LineSegments2
     // is one instance per segment, so its index describes a quad, not the data.
-    const prims = mesh.isLineSegments2
+    // So is an arrow: primitives are then the arrows, not their triangles.
+    const instanced = mesh.geometry.isInstancedBufferGeometry
+    const glyphs = instanced && !lines
+    const prims = instanced
       ? mesh.geometry.instanceCount
       : (index ? index.count / (lines ? 2 : 3) : 0)
     const verts = mesh.isLineSegments2
       ? 2 * prims
       : (mesh.geometry.getAttribute('position')?.count ?? 0)
     return {
-      mode: lines ? 'lines' : 'triangles',
+      mode: lines ? 'lines' : (glyphs ? 'glyphs' : 'triangles'),
       vertices: verts,
-      triangles: lines ? 0 : prims,
+      triangles: (lines || glyphs) ? 0 : prims,
       primitives: prims,
-      verticesPerTriangle: (!lines && prims)
+      verticesPerTriangle: (!lines && !glyphs && prims)
         ? Number((verts / prims).toFixed(2)) : null,
       colored: mesh.material.uniforms?.uColored?.value ?? null,
       hasScalar: mesh.material.uniforms?.uHasScalar?.value ?? null,
       lineWidth: mesh.material.isLineMaterial ? mesh.material.linewidth : null,
       opacityMap: mesh.material.uniforms?.uOpacityMap?.value ?? null,
       edges: (this.edges.get(name)?.geometry.index.count ?? 0) / 2,
+      glyphSize: mesh.material.uniforms?.uGlyphSize?.value ?? null,
+      scaleBy: mesh.material.uniforms?.uScaleBy?.value ?? null,
     }
   }
 

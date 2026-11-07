@@ -384,7 +384,8 @@ to use; `uv run doit ci` passes there with nothing extra installed.
 - **Arrow length must be normalized by the SEED set's own max |vector|**, not
   the whole domain's. Scaling by a domain-wide peak made the arrows vanish
   whenever the color field was a large scalar like T; `_seed_vector_max` reads
-  the plane grid / isosurface samples where arrows are actually drawn.
+  the plane grid / isosurface samples where arrows are actually drawn. The
+  three.js client does the same from the anchors it receives.
 
 ## The three.js client (2026-09-08)
 
@@ -428,7 +429,7 @@ This split *is* the architecture, and the UI tags every control `server` or
 | Client — a uniform or GPU state, instant | Server — re-extraction, one round trip |
 |---|---|
 | color map, color range, bands, opacity-by-value | color **field** and component (scalars are baked per vertex) |
-| per-part visibility and opacity, "color by field" | cut-plane position/axis, isovalues, seed counts, glyph count/size |
+| per-part visibility and opacity, "color by field", arrow size and length-by-magnitude | cut-plane position/axis, isovalues, seed counts, glyph count |
 | near-wall culling, shell mesh edges | time step, patch selection, crinkle slice, clip-at-plane, tubes |
 | camera, view presets, F-pick, lighting, theme, legend | true cell values, the isosurface's locked field |
 | per-part solid color, color-by-field | *robust range and Rescale: a cheap `/api/range`, no extraction* |
@@ -457,7 +458,7 @@ setting rebuilt a VTK object, and has been dropped.
   debounce for typed input: keystrokes never re-extract.
 - **Patch selection** behind an Apply — it reloads the case, not just a filter.
 - **Commit-on-release** for every slider whose value the server needs: plane
-  position, time, isosurface count, glyph count and size.
+  position, time, isosurface count, glyph count.
 
 **Dropped, because they stopped costing anything:** bands, color min/max and
 opacity-by-value are now live (they were behind the Options Apply); per-part
@@ -971,6 +972,10 @@ The cut plane is the hub — the slice and the stream-tracer seeds derive from i
   unlike mask-points on the cut faces which clump where the mesh is fine. "On
   isosurface" seeds off the contour output (mask-points). `update_glyphs` takes
   the plane axis+coord to size the grid.
+- **Arrows on the wire (2026-11-06)**: a `points` part, one anchor per arrow
+  with `vector` and `scalar` (`glyph_points`, `wire.points_part`). The browser
+  instances one arrow over them (`VERT_GLYPH`), so size and length-by-magnitude
+  are uniforms. 400 arrows on hotRoom: 1.09 MB to 13 KB.
 
 ## Memory management (2026-09-07)
 

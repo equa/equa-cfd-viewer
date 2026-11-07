@@ -1065,6 +1065,30 @@ def main():
             n = len(scene)
             check("selecting a tool does not refetch", len(scene) == n)
 
+            # Arrows: the server sends anchors and vectors, the browser
+            # instances one arrow over them, so size and length are free.
+            page.click(ctl("show-glyph"))
+            wait_idle(page, scene)
+            arrows = page.evaluate("window.__viz.partInfo('glyph')")
+            check("arrows arrive as instanced anchors",
+                  arrows["mode"] == "glyphs" and arrows["primitives"] > 0, str(arrows))
+            shot(page, out / "07-arrows.png")
+            n = len(scene)
+            page.click(ctl("glyph-scale-by"))
+            thumb = page.locator(ctl("glyph-scale")).locator("[role=slider]")
+            thumb.focus()
+            for _ in range(5):
+                page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(300)
+            after = page.evaluate("window.__viz.partInfo('glyph')")
+            check("arrow size and length cost no round trip", len(scene) == n,
+                  f"{len(scene) - n} request(s)")
+            check("arrow size and length reach the shader",
+                  after["scaleBy"] == 1 and after["glyphSize"] > arrows["glyphSize"],
+                  f"size {arrows['glyphSize']:.3f} -> {after['glyphSize']:.3f}")
+            page.click(ctl("glyph-scale-by"))
+            page.click(ctl("show-glyph"))
+
             up = page.evaluate("window.__viz.camera()")["up"]
             check("camera up is +Z", abs(up[2] - 1) < 1e-6 and abs(up[0]) < 1e-6, f"up={up}")
             before = page.evaluate("window.__viz.camera()")

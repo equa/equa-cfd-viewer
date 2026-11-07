@@ -35,7 +35,7 @@ class Part:
 
     def __init__(self, name, mode, attributes, index, ranges=None, edges=None):
         self.name = name
-        self.mode = mode  # "triangles" | "lines"
+        self.mode = mode  # "triangles" | "lines" | "points"
         self.attributes = attributes  # name -> (N, C) float32 array
         self.index = index  # flat uint32 array
         # Flat (start, count) pairs, one per polyline, for LINES parts.
@@ -57,6 +57,8 @@ class Part:
 
     @property
     def n_primitives(self):
+        if self.mode == "points":
+            return self.n_vertices
         per = 3 if self.mode == "triangles" else 2
         return 0 if self.index is None else len(self.index) // per
 
@@ -272,6 +274,22 @@ def line_part(name, polydata, scalar_array, extras=None):
     if index.size == 0:
         return None
     return Part(name, "lines", attrs, index, ranges=_line_ranges(polydata))
+
+
+def points_part(name, polydata, scalar_array, vector_array):
+    """One point per glyph: position, ``vector`` and ``scalar``, no index.
+    The client instances one arrow mesh over them."""
+    vectors = polydata.GetPointData().GetArray(vector_array) if vector_array else None
+    if polydata.GetNumberOfPoints() == 0 or vectors is None:
+        return None
+    attrs = {
+        "position": _f32(vtk_to_numpy(polydata.GetPoints().GetData()), 3),
+        "vector": _f32(vtk_to_numpy(vectors), 3),
+    }
+    scalars = polydata.GetPointData().GetArray(scalar_array)
+    if scalars is not None:
+        attrs["scalar"] = _f32(vtk_to_numpy(scalars), 1)
+    return Part(name, "points", attrs, np.zeros(0, dtype=np.uint32))
 
 
 def pack(parts, meta):

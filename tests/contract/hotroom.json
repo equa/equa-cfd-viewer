@@ -10,7 +10,7 @@
      {
       "cells": 500,
       "decomposed": false,
-      "id": "548979d16a24",
+      "id": "f15f84cfd275",
       "label": "hotRoom",
       "name": "hotRoom",
       "path": "hotRoom"
@@ -47,7 +47,7 @@
      10.0
     ],
     "case": "hotRoom",
-    "caseId": "548979d16a24",
+    "caseId": "f15f84cfd275",
     "caseLabel": "hotRoom",
     "cases": [
      "hotRoom"
@@ -83,7 +83,8 @@
        "when": {
         "surface_clip": "1"
        }
-      }
+      },
+      "boundary_edges"
      ],
      "geometry": [
       "geometry_mode"
@@ -92,8 +93,6 @@
       "vector_field",
       "glyph_source",
       "glyph_count",
-      "glyph_scale",
-      "glyph_scale_by",
       "field",
       "component",
       {
@@ -139,8 +138,8 @@
       "vector_field",
       "stream_seeds",
       "stream_length",
-      "plane_axis",
-      "plane_coord",
+      "stream_plane_axis",
+      "stream_plane_coord",
       "field",
       "component"
      ]
@@ -827,10 +826,10 @@
   },
   {
    "buffers": {
-    "glyph/@index": "67ec904ad7817db048cae8d0f6bfcd43da3bd3bc5ddacf2fa4149bc9e81a921a",
-    "glyph/normal": "1cb003ac43e63114d9a543dd5cc7addbe2d8476b14eb117ce74eecc29375edf0",
-    "glyph/position": "2327809c35be8c0f02e82abcc962d72d60cc3d0115d44166d4e3ebcd5180dac5",
-    "glyph/scalar": "8faa0865eb84e6ab0dc606c5751f7ec8a706aecafd75f405aae8259662ae297e"
+    "glyph/@index": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "glyph/position": "98d8702ea883867c7fabf57a64628c4cc924d429f5e1e6d060120d523fa95e8f",
+    "glyph/scalar": "314b08a92e4d850cdc646fb61cb27c19eda3549c807ca829b91b0c975b142a2e",
+    "glyph/vector": "66a0ada5f9cd7bdced7a72668bfe35bc7f0439bfbe19b2df4897d4e81e3eb54d"
    },
    "header": {
     "bounds": [
@@ -852,31 +851,31 @@
     "parts": [
      {
       "attributes": {
-       "normal": {
-        "components": 3,
-        "length": 318420,
-        "type": "f32"
-       },
        "position": {
         "components": 3,
-        "length": 318420,
+        "length": 5220,
         "type": "f32"
        },
        "scalar": {
         "components": 1,
-        "length": 106140,
+        "length": 1740,
+        "type": "f32"
+       },
+       "vector": {
+        "components": 3,
+        "length": 5220,
         "type": "f32"
        }
       },
       "counts": {
-       "primitives": 28710,
-       "vertices": 26535
+       "primitives": 435,
+       "vertices": 435
       },
       "index": {
-       "length": 344520,
+       "length": 0,
        "type": "u32"
       },
-      "mode": "triangles",
+      "mode": "points",
       "name": "glyph"
      }
     ],
@@ -985,10 +984,10 @@
     "boundary/scalar": "59f4c13183ac051510c1eea1127c45540085a860875b07d4987d64ddbf46acbe",
     "geometry/@index": "4a8fec464a19709a9d20ec978e47960a7d7f40e73959cfab58d4d1dd63ad1e8d",
     "geometry/position": "889c5ba32e89c9c5688d3a911190f44268101831c897054c7774b8f5eb7ce6ff",
-    "glyph/@index": "67ec904ad7817db048cae8d0f6bfcd43da3bd3bc5ddacf2fa4149bc9e81a921a",
-    "glyph/normal": "1cb003ac43e63114d9a543dd5cc7addbe2d8476b14eb117ce74eecc29375edf0",
-    "glyph/position": "2327809c35be8c0f02e82abcc962d72d60cc3d0115d44166d4e3ebcd5180dac5",
-    "glyph/scalar": "8faa0865eb84e6ab0dc606c5751f7ec8a706aecafd75f405aae8259662ae297e",
+    "glyph/@index": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "glyph/position": "98d8702ea883867c7fabf57a64628c4cc924d429f5e1e6d060120d523fa95e8f",
+    "glyph/scalar": "314b08a92e4d850cdc646fb61cb27c19eda3549c807ca829b91b0c975b142a2e",
+    "glyph/vector": "66a0ada5f9cd7bdced7a72668bfe35bc7f0439bfbe19b2df4897d4e81e3eb54d",
     "iso/@index": "430f2b2afb59f2fb44bdf9e1e666d3e4e9c253462e2daac5e5fc140e94808c6c",
     "iso/normal": "264b6affffa48269a6707e41b4a0977066a48be56693a4dcdad7124952df67da",
     "iso/position": "50a60389add0b4c3b7c38fe06d9aa232b2249fdb332312fcc670de7fc85a9071",
@@ -1145,31 +1144,31 @@
      },
      {
       "attributes": {
-       "normal": {
-        "components": 3,
-        "length": 318420,
-        "type": "f32"
-       },
        "position": {
         "components": 3,
-        "length": 318420,
+        "length": 5220,
         "type": "f32"
        },
        "scalar": {
         "components": 1,
-        "length": 106140,
+        "length": 1740,
+        "type": "f32"
+       },
+       "vector": {
+        "components": 3,
+        "length": 5220,
         "type": "f32"
        }
       },
       "counts": {
-       "primitives": 28710,
-       "vertices": 26535
+       "primitives": 435,
+       "vertices": 435
       },
       "index": {
-       "length": 344520,
+       "length": 0,
        "type": "u32"
       },
-      "mode": "triangles",
+      "mode": "points",
       "name": "glyph"
      },
      {
@@ -1755,10 +1754,10 @@
   },
   {
    "buffers": {
-    "glyph/@index": "7f79bbbaef40e3d7cd07da268f19e6e27fc7a87fa38410246dfe9d1d12afe10e",
-    "glyph/normal": "9a6a239ab40664c78e0111e5d2fe6d5708cf6a963b9777bfe8827824b3285279",
-    "glyph/position": "55257a36741eba88704801a9e203c85c2355d6e090dd2f847c99049bd2f4b118",
-    "glyph/scalar": "977a178272a3cc16091aa2a46a7b2b2d3fbf0c023bc5f6a6061062acdedcf5af"
+    "glyph/@index": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "glyph/position": "54c477d1b8c642fc0ba5cafeb4bfb3919b32d51d328f70ac6fe7b2e17312384f",
+    "glyph/scalar": "be30b8bc9165d666db6ac2fee3b949a256b9b96db686acdfdf720291e235138e",
+    "glyph/vector": "6f807fc43c8eb6345414b1579c92b2f8ff047270d875b4c35e10e7a911c7f79c"
    },
    "header": {
     "bounds": [
@@ -1780,31 +1779,31 @@
     "parts": [
      {
       "attributes": {
-       "normal": {
-        "components": 3,
-        "length": 169092,
-        "type": "f32"
-       },
        "position": {
         "components": 3,
-        "length": 169092,
+        "length": 2772,
         "type": "f32"
        },
        "scalar": {
         "components": 1,
-        "length": 56364,
+        "length": 924,
+        "type": "f32"
+       },
+       "vector": {
+        "components": 3,
+        "length": 2772,
         "type": "f32"
        }
       },
       "counts": {
-       "primitives": 15246,
-       "vertices": 14091
+       "primitives": 231,
+       "vertices": 231
       },
       "index": {
-       "length": 182952,
+       "length": 0,
        "type": "u32"
       },
-      "mode": "triangles",
+      "mode": "points",
       "name": "glyph"
      }
     ],
@@ -1837,10 +1836,10 @@
   },
   {
    "buffers": {
-    "glyph/@index": "9902a8b35a4114b3fd5096db3b44b021d263caae2439d2591cebf7a7feb48963",
-    "glyph/normal": "a030b2ee2f64f53c14418d55042feb1b0194b30afa0719de2a7361c68d8708c7",
-    "glyph/position": "64b11a8ba1e15222405a41ac05aa32238155cf2b0275ca196c2d4637ee341dae",
-    "glyph/scalar": "f469a25e7c2b5791a46d738fef54ba1872ba9c618383af2226f9c77868fbd81a"
+    "glyph/@index": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "glyph/position": "50a60389add0b4c3b7c38fe06d9aa232b2249fdb332312fcc670de7fc85a9071",
+    "glyph/scalar": "455a8ddcb202c0298fcd9610e98360dd5d548fdcfca71357ff1f9095f3102a8e",
+    "glyph/vector": "a75ad385f3962261ec44df654723ec68e3f50055e618701192d7dd91d30db572"
    },
    "header": {
     "bounds": [
@@ -1862,31 +1861,31 @@
     "parts": [
      {
       "attributes": {
-       "normal": {
-        "components": 3,
-        "length": 49776,
-        "type": "f32"
-       },
        "position": {
         "components": 3,
-        "length": 49776,
+        "length": 816,
         "type": "f32"
        },
        "scalar": {
         "components": 1,
-        "length": 16592,
+        "length": 272,
+        "type": "f32"
+       },
+       "vector": {
+        "components": 3,
+        "length": 816,
         "type": "f32"
        }
       },
       "counts": {
-       "primitives": 4488,
-       "vertices": 4148
+       "primitives": 68,
+       "vertices": 68
       },
       "index": {
-       "length": 53856,
+       "length": 0,
        "type": "u32"
       },
-      "mode": "triangles",
+      "mode": "points",
       "name": "glyph"
      }
     ],
@@ -1961,8 +1960,13 @@
        }
       },
       "counts": {
+       "edges": 260,
        "primitives": 260,
        "vertices": 132
+      },
+      "edges": {
+       "length": 2080,
+       "type": "u32"
       },
       "index": {
        "length": 3120,
@@ -2694,7 +2698,7 @@
   }
  ],
  "fingerprint": {
-  "case": "200a83fe52c0fb12",
+  "case": "6fd60ae69b7b16ca",
   "matplotlib": "3.11.2",
   "numpy": "2.5.4",
   "vtk": "9.7.1"

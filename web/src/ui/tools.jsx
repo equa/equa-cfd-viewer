@@ -493,9 +493,9 @@ export function GlyphTool({ meta, request, setRequest, style, setStyle }) {
       <Switch
         size="xs"
         mb="xs"
-        label={tagged('Length follows magnitude', 'server')}
-        checked={request.glyph_scale_by}
-        onChange={(e) => setRequest({ glyph_scale_by: e.currentTarget.checked })}
+        label={tagged('Length follows magnitude', 'client')}
+        checked={style.scaleBy ?? false}
+        onChange={(e) => setStyle({ scaleBy: e.currentTarget.checked })}
         data-ctl="glyph-scale-by"
       />
       <LabelledSlider
@@ -508,17 +508,16 @@ export function GlyphTool({ meta, request, setRequest, style, setStyle }) {
         onCommit={(v) => setRequest({ glyph_count: v })}
         data-ctl="glyph-count"
       />
-      {/* Size is a vtkGlyph3D scale factor, so it rebuilds the arrows: a server
-          control, and it commits on release rather than staying live as it did
-          in the Trame app (where it was equally heavy but bound live). */}
+      {/* The browser instances the arrows, so size is a uniform: live. */}
       <LabelledSlider
         label="Size"
         min={0.1}
         max={5}
         step={0.1}
         precision={1}
-        value={request.glyph_scale}
-        onCommit={(v) => setRequest({ glyph_scale: v })}
+        live
+        value={style.size ?? 1}
+        onChange={(v) => setStyle({ size: v })}
         data-ctl="glyph-scale"
       />
     </>

@@ -854,12 +854,7 @@ class FoamPipeline:
         self.glyph_actor.SetVisibility(1 if visible else 0)
         if not visible:
             return
-        if source == "isosurface":
-            self.glyph_seeds.SetMaximumNumberOfPoints(n_glyphs)
-            seed = self.glyph_seeds
-        else:  # "plane" — uniform grid over the cut plane
-            self._configure_glyph_plane(axis, coord, n_glyphs)
-            seed = self.glyph_grid
+        seed = self._glyph_seed(source, n_glyphs, axis, coord)
         self.glyph.SetInputConnection(seed.GetOutputPort())
 
         # Room airflow spans orders of magnitude -- a plume core moving 100x
@@ -873,6 +868,21 @@ class FoamPipeline:
             self.glyph.SetScaleModeToDataScalingOff()
             reference = 1.0
         self.glyph.SetScaleFactor(self.diagonal() * 0.035 * scale / reference)
+
+    def _glyph_seed(self, source, n_glyphs, axis, coord):
+        if source == "isosurface":
+            self.glyph_seeds.SetMaximumNumberOfPoints(n_glyphs)
+            return self.glyph_seeds
+        # "plane": a uniform grid over the cut plane
+        self._configure_glyph_plane(axis, coord, n_glyphs)
+        return self.glyph_grid
+
+    def glyph_points(self, source, n_glyphs, axis, coord):
+        """Where the arrows go, with their vectors and colour scalar. The
+        browser builds the arrows, so size and length cost no extraction."""
+        seed = self._glyph_seed(source, n_glyphs, axis, coord)
+        seed.Update()
+        return seed.GetOutput()
 
     def _seed_vector_max(self, seed):
         """Max ``|vector|`` over the glyph SEED points -- the plane grid / iso

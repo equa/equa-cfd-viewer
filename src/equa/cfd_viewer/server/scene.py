@@ -82,8 +82,7 @@ PART_INPUTS = {
     "stream": ["vector_field", "stream_seeds", "stream_length",
                "stream_plane_axis", "stream_plane_coord", "field", "component"],
     "glyph": [
-        "vector_field", "glyph_source", "glyph_count", "glyph_scale",
-        "glyph_scale_by", "field", "component",
+        "vector_field", "glyph_source", "glyph_count", "field", "component",
         {"when": {"glyph_source": "slice"}, "keys": ["plane_axis", "plane_coord"]},
         {"when": {"glyph_source": "isosurface"},
          "keys": ["contour_field", "contour_count", "contour_value",
@@ -481,22 +480,18 @@ class SceneSource:
                               COLOR_ARRAY, extras={"travel": TRAVEL_ARRAY})
 
     def _part_glyph(self, ctx):
-        """Arrows on the cut plane or on the isosurface. ``vtkGlyph3D`` emits
-        polydata, so they need no special handling -- they are triangles like
-        any other part."""
+        """Arrow anchors on the cut plane or on the isosurface: points with
+        their vectors. The browser draws the arrows, so size and length
+        scaling are client-side."""
         pipe = self.pipeline
         q = ctx["query"]
-        pipe.update_glyphs(
-            True,
+        points = pipe.glyph_points(
             q.get("glyph_source") or "plane",
             int(_num(q, "glyph_count", 400)),
-            _num(q, "glyph_scale", 1.0),
-            _flag(q, "glyph_scale_by"),
             ctx["axis"],
             ctx["coord"],
         )
-        pipe.glyph.Update()
-        return wire.surface_part("glyph", pipe.glyph.GetOutput(), COLOR_ARRAY)
+        return wire.points_part("glyph", points, COLOR_ARRAY, pipe.vector_field)
 
     def _part_geometry(self, ctx):
         """Building geometry from ``constant/triSurface/building*.obj`` as flat
