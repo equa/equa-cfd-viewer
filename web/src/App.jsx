@@ -9,6 +9,8 @@ import { BottomBar } from './ui/BottomBar.jsx'
 import { Busy, Hud, Legend } from './ui/overlays.jsx'
 import { StartScreen } from './ui/StartScreen.jsx'
 import { useShortcuts } from './ui/shortcuts.js'
+import { applyScene, emptyViews, importViews, readViews, sceneFrom } from './views/document.js'
+import { localStore } from './views/localStore.js'
 
 /*
  * The composition root. It owns the two state objects (see scene/state.js) and
@@ -51,6 +53,16 @@ export default function App() {
   // The start screen: shown when there is no case to open, or the one asked
   // for does not exist (then with the server's reason as `notice`).
   const [start, setStart] = useState({ show: false, notice: null })
+  // The open case's saved scenes and camera slots, and the one notice the scene
+  // section shows (openspec scenes-and-cameras A4, A10).
+  const [views, setViews] = useState(emptyViews)
+  const [viewsNotice, setViewsNotice] = useState(null)
+  // Set when a scene load sets the isosurface's values, so the reseed below does
+  // not overwrite them; holds the field identity the scene brings.
+  const keepContour = useRef(null)
+  // Read by the __viz.state test hook, which is installed once.
+  const stateRef = useRef(null)
+  stateRef.current = { request, appearance, views }
 
   const setRequest = useCallback((patch) => {
     setRequestState((r) => (typeof patch === 'function' ? patch(r) : { ...r, ...patch }))
@@ -84,6 +96,7 @@ export default function App() {
       tuneComets: (o) => viewer.setComets(o),
       partInfo: (name) => viewer.partInfo(name),
       streamSpans: () => viewer.streamSpans(),
+      state: () => stateRef.current,
     }
     return () => { viewer.dispose(); viewerRef.current = null }
   }, [])
@@ -263,6 +276,9 @@ export default function App() {
   const isoComponent = request?.contour_field ? 'magnitude' : request?.component
   useEffect(() => {
     if (!request?.case || !isoField) return undefined
+    const kept = keepContour.current
+    keepContour.current = null
+    if (kept === `${request.case}|${isoField}|${isoComponent}`) return undefined
     let cancelled = false
     api.range({ case: request.case, field: isoField, component: isoComponent })
       .then(({ range: [lo, hi] }) => {
@@ -389,6 +405,85 @@ export default function App() {
     link.click()
   }, [request?.case, info])
 
+  // -- saved views -------------------------------------------------------
+
+  const caseId = request?.case
+  useEffect(() => {
+    if (!caseId) return undefined
+    let cancelled = false
+    setViewsNotice(null)
+    localStore.load(caseId).then((doc) => { if (!cancelled) setViews(doc) })
+    return () => { cancelled = true }
+  }, [caseId])
+
+  // Every edit saves the whole document (C2).
+  const editViews = useCallback((doc) => {
+    setViews(doc)
+    localStore.save(caseId, doc).catch((e) => setViewsNotice({ color: 'red', text: e.message }))
+  }, [caseId])
+
+  const onLoadCamera = useCallback((slot) => {
+    const camera = views.cameras[slot]
+    if (camera) viewerRef.current?.set_camera(camera)
+  }, [views])
+
+  const onStoreCamera = useCallback((slot) => {
+    const camera = viewerRef.current?.camera_state()
+    if (camera) editViews({ ...views, cameras: { ...views.cameras, [slot]: camera } })
+  }, [views, editViews])
+
+  const onSaveScene = useCallback((name, withCamera) => {
+    const camera = withCamera ? viewerRef.current?.camera_state() : null
+    const scene = sceneFrom(name, request, appearance, camera)
+    const at = views.scenes.findIndex((s) => s.name === name)
+    const scenes = at < 0 ? [...views.scenes, scene] : views.scenes.map((s, i) => (i === at ? scene : s))
+    editViews({ ...views, scenes })
+  }, [request, appearance, views, editViews])
+
+  const onLoadScene = useCallback((name) => {
+    const scene = views.scenes.find((s) => s.name === name)
+    if (!scene || !meta) return
+    const next = applyScene(scene, meta, { request, appearance })
+    const r = next.request
+    keepContour.current = `${r.case}|${r.contour_field || r.field}|${r.contour_field ? 'magnitude' : r.component}`
+    setRequestState(next.request)
+    setAppearanceState(next.appearance)
+    if (scene.camera) viewerRef.current?.set_camera(scene.camera)
+    setViewsNotice(next.skipped.length
+      ? { color: 'orange', text: `Not in this case, defaults used: ${next.skipped.join('; ')}.` }
+      : null)
+  }, [views, meta, request, appearance])
+
+  const onRenameScene = useCallback((from, to) => {
+    editViews({ ...views, scenes: views.scenes.map((s) => (s.name === from ? { ...s, name: to } : s)) })
+  }, [views, editViews])
+
+  const onDeleteScene = useCallback((name) => {
+    editViews({ ...views, scenes: views.scenes.filter((s) => s.name !== name) })
+  }, [views, editViews])
+
+  const onExportViews = useCallback(() => {
+    const blob = new Blob([JSON.stringify(views, null, 2)], { type: 'application/json' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `${meta?.case || 'case'}-views.json`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(link.href), 0)
+  }, [views, meta])
+
+  const onImportViews = useCallback(async (file) => {
+    try {
+      const incoming = readViews(JSON.parse(await file.text()))
+      const { doc, scenes, slots } = importViews(views, incoming)
+      editViews(doc)
+      const cams = slots.length ? `, camera${slots.length > 1 ? 's' : ''} ${slots.join(', ')}` : ''
+      setViewsNotice({ color: 'blue', text: `Imported ${scenes} scene${scenes === 1 ? '' : 's'}${cams}.` })
+    } catch (e) {
+      const reason = e instanceof SyntaxError ? 'not a views file' : e.message
+      setViewsNotice({ color: 'red', text: `Import failed: ${reason}.` })
+    }
+  }, [views, editViews])
+
   const onRefreshTimes = useCallback(async () => {
     const { times } = await api.times(request.case)
     setMeta((m) => ({ ...m, times }))
@@ -436,6 +531,15 @@ export default function App() {
           tubes={appearance.tubes}
           setTubes={setTubes}
           domain={domain}
+          views={views}
+          viewsNotice={viewsNotice}
+          onDismissNotice={() => setViewsNotice(null)}
+          onSaveScene={onSaveScene}
+          onLoadScene={onLoadScene}
+          onRenameScene={onRenameScene}
+          onDeleteScene={onDeleteScene}
+          onExportViews={onExportViews}
+          onImportViews={onImportViews}
         />
         <div className="stage" ref={stageRef}>
           <Hud info={info} stats={stats} />
@@ -451,6 +555,9 @@ export default function App() {
             setRequest={setRequest}
             onView={onView}
             onRefreshTimes={onRefreshTimes}
+            cameras={views.cameras}
+            onLoadCamera={onLoadCamera}
+            onStoreCamera={onStoreCamera}
           />
           <Busy
             show={!start.show && (opening || busy || !request)}

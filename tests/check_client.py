@@ -470,6 +470,250 @@ def zip_checks(browser, out):
             stop_server(proc)
 
 
+def views_checks(page, scene, out):
+    """Saved cameras and scenes (openspec scenes-and-cameras): slots, scenes,
+    notices, export and import, persistence and per-case storage."""
+    print("\nsaved views")
+    state = lambda: page.evaluate("window.__viz.state()")  # noqa: E731
+    cam = lambda: page.evaluate("window.__viz.camera()")  # noqa: E731
+
+    def near(a, b, tol=1e-6):
+        return all(abs(x - y) < tol for x, y in zip(a, b))
+
+    def same_camera(a, b):
+        return all(near(a[k], b[k]) for k in ("position", "target", "up")) \
+            and abs(a["fov"] - b["fov"]) < 1e-9
+
+    def filled(slot):
+        return page.locator(ctl(f"cam-{slot}")).get_attribute("data-filled") == "true"
+
+    def row(name):
+        return page.locator(f'[data-scene="{name}"]')
+
+    def scene_names():
+        return page.locator("[data-scene]").evaluate_all("rs => rs.map(r => r.dataset.scene)")
+
+    def notice():
+        loc = page.locator(ctl("views-notice"))
+        return loc.inner_text() if loc.count() else ""
+
+    def save_scene(name, with_camera=False):
+        page.click(ctl("scene-save"))
+        page.fill(ctl("scene-name"), name)
+        if with_camera:
+            page.click(ctl("scene-with-camera"))
+        page.click(ctl("scene-save-ok"))
+        page.wait_for_timeout(200)
+
+    def menu(name, item):
+        row(name).locator(ctl("scene-menu")).click()
+        page.click(ctl(item))
+
+    def set_plane_z(z):
+        # Apply stays disabled when the typed value is the applied one.
+        page.click(ctl("tool-cutplane"))
+        page.click(ctl("plane-z"))
+        page.keyboard.press("Control+A")
+        page.keyboard.type(z, delay=40)
+        page.keyboard.press("Tab")
+        page.wait_for_timeout(200)
+        if page.locator(ctl("plane-apply")).is_enabled():
+            page.click(ctl("plane-apply"))
+        wait_idle(page, scene)
+
+    def step_time(key):
+        thumb = page.locator(ctl("time")).locator("[role=slider]")
+        thumb.focus()
+        page.keyboard.press(key)
+        wait_idle(page, scene)
+
+    # -- camera slots
+    for name in ("cam-1", "cam-2", "cam-3", "cam-4", "cam-save", "scene-save",
+                 "views-export", "views-import"):
+        check(f"saved views: {name} present", page.locator(ctl(name)).count() == 1)
+    page.wait_for_timeout(600)
+    before = cam()
+    page.click(ctl("cam-1"))
+    page.wait_for_timeout(300)
+    check("an empty slot does nothing", same_camera(before, cam()))
+    opacity = float(page.locator(ctl("cam-1")).evaluate("e => getComputedStyle(e).opacity"))
+    check("an empty slot is dimmed", opacity < 1, f"opacity {opacity}")
+
+    n = len(scene)
+    page.click(ctl("cam-save"))
+    check("Save arms the slots",
+          page.locator(ctl("cam-save")).get_attribute("data-arming") == "true")
+    page.click(ctl("cam-1"))
+    stored = cam()
+    check("the next slot click stores the camera and disarms", filled("1")
+          and page.locator(ctl("cam-save")).get_attribute("data-arming") == "false")
+    orbit(page)
+    page.wait_for_timeout(100)
+    page.click(ctl("cam-1"))
+    page.wait_for_timeout(900)
+    got = cam()
+    check("a slot restores its camera exactly", same_camera(stored, got),
+          f"{[round(v, 4) for v in stored['position']]}"
+          f" vs {[round(v, 4) for v in got['position']]}")
+    check("cameras cost no round trip", len(scene) == n, f"{len(scene) - n} request(s)")
+
+    page.click(ctl("cam-save"))
+    page.keyboard.press("Escape")
+    page.click(ctl("cam-3"))
+    check("Esc ends save mode without storing", not filled("3"))
+    page.click(ctl("cam-save"))
+    page.click(ctl("cam-save"))
+    page.click(ctl("cam-4"))
+    check("a second Save click ends save mode without storing", not filled("4"))
+
+    # -- scenes
+    check("no saved scenes yet", page.locator(ctl("scenes-empty")).count() == 1)
+    step_time("ArrowLeft")
+    page.click(ctl("field"))
+    page.get_by_role("option", name="p_rgh", exact=True).click()
+    wait_idle(page, scene)
+    set_plane_z("1.1")
+    open_options(page)
+    page.fill(ctl("range-min"), "-5")
+    page.fill(ctl("range-max"), "5")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    check("the cut plane moved before saving",
+          abs(state()["request"]["plane"]["z"] - 1.1) < 1e-9, str(state()["request"]["plane"]))
+    save_scene("Slice", with_camera=True)
+    saved, saved_cam = state(), cam()
+    check("a saved scene is listed", row("Slice").count() == 1)
+
+    # Change everything the scene holds, then load it.
+    page.click(ctl("field"))
+    page.get_by_role("option", name="T", exact=True).click()
+    wait_idle(page, scene)
+    set_plane_z("2.0")
+    page.click(ctl("auto-range"))
+    page.click(ctl("show-glyph"))
+    wait_idle(page, scene)
+    save_scene("Auto")
+    page.click(ctl("tool-glyph"))
+    orbit(page)
+    time_before = state()["request"]["time_index"]
+    row("Slice").locator(ctl("scene-load")).click()
+    wait_idle(page, scene)
+    page.wait_for_timeout(900)
+    s = state()
+    check("loading restores the field and the cut plane",
+          s["request"]["field"] == "p_rgh" and abs(s["request"]["plane"]["z"] - 1.1) < 1e-9,
+          f"{s['request']['field']} at z={s['request']['plane']['z']},"
+          f" saved z={saved['request']['plane']['z']}")
+    check("loading restores visible parts and styles",
+          s["appearance"]["visible"] == saved["appearance"]["visible"]
+          and s["appearance"]["styles"] == saved["appearance"]["styles"])
+    check("loading keeps the time step", s["request"]["time_index"] == time_before)
+    check("a scene with a camera restores it", same_camera(saved_cam, cam()))
+    check("the selected tool is kept", s["appearance"]["activeTool"] == "glyph")
+    check("a fixed range keeps its values",
+          s["appearance"]["range"] == [-5, 5] and not s["appearance"]["autoRange"],
+          str(s["appearance"]["range"]))
+    step_time("ArrowRight")
+    check("a fixed range keeps its values at another time step",
+          state()["appearance"]["range"] == [-5, 5])
+    page.click(ctl("refresh-times"))
+    wait_idle(page, scene)
+    check("the tube radius survives Refresh time steps",
+          state()["appearance"]["tubes"]["radius"] == saved["appearance"]["tubes"]["radius"])
+
+    row("Auto").locator(ctl("scene-load")).click()
+    wait_idle(page, scene)
+    step_time("ArrowLeft")
+    page.wait_for_timeout(600)
+    s = state()
+    check("auto range stays auto and follows the data",
+          s["appearance"]["autoRange"] and s["appearance"]["range"] != [-5, 5],
+          str(s["appearance"]["range"]))
+    check("a clean load shows no notice", notice() == "")
+
+    page.click(ctl("scene-save"))
+    page.fill(ctl("scene-name"), "Auto")
+    check("saving an existing name asks to replace",
+          page.locator(ctl("scene-exists")).count() == 1
+          and page.locator(ctl("scene-save-ok")).inner_text().strip() == "Replace")
+    page.click(ctl("scene-save-ok"))
+    check("replacing keeps one row", scene_names() == ["Slice", "Auto"], str(scene_names()))
+
+    menu("Auto", "scene-rename")
+    page.fill(ctl("scene-rename-input"), "Auto 2")
+    page.keyboard.press("Enter")
+    check("rename", scene_names() == ["Slice", "Auto 2"], str(scene_names()))
+    menu("Auto 2", "scene-delete")
+    check("delete asks first",
+          "again" in page.locator(ctl("scene-delete")).inner_text() and row("Auto 2").count() == 1)
+    page.click(ctl("scene-delete"))
+    check("delete on the second click", scene_names() == ["Slice"], str(scene_names()))
+
+    # -- export, persistence, per case
+    with page.expect_download() as download:
+        page.click(ctl("views-export"))
+    exported = json.loads(Path(download.value.path()).read_text())
+    check("export writes the views document",
+          exported["format"] == "equa-cfd-views" and len(exported["scenes"]) == 1
+          and exported["cameras"]["1"] is not None,
+          download.value.suggested_filename)
+
+    page.reload(wait_until="domcontentloaded")
+    wait_for_render(page)
+    wait_idle(page, scene)
+    check("views survive a reload", row("Slice").count() == 1 and filled("1"))
+
+    page.goto(f"http://127.0.0.1:{PORT}/?case=cavity", wait_until="domcontentloaded")
+    wait_for_render(page)
+    wait_idle(page, scene)
+    check("views are per case",
+          page.locator(ctl("scenes-empty")).count() == 1 and not filled("1"))
+
+    # -- import onto the other case
+    save_scene("Slice")
+    page.click(ctl("cam-save"))
+    page.click(ctl("cam-2"))
+    foreign = dict(exported["scenes"][0], name="Foreign")
+    foreign["request"] = dict(foreign["request"], field="T", patches=["nope"])
+    exported["scenes"].append(foreign)
+    views_file = out / "views.json"
+    views_file.write_text(json.dumps(exported))
+    page.set_input_files(ctl("views-file"), str(views_file))
+    page.wait_for_timeout(300)
+    check("import appends, suffixing a clash",
+          scene_names() == ["Slice", "Slice (2)", "Foreign"], str(scene_names()))
+    check("import fills only the slots the file has", filled("1") and filled("2"))
+    check("import reports what came in", "Imported 2 scenes, camera 1" in notice(), notice())
+    row("Slice (2)").locator(ctl("scene-load")).click()
+    wait_idle(page, scene)
+    check("a field the case lacks falls back, with a notice",
+          state()["request"]["field"] != "p_rgh" and "p_rgh" in notice(), notice())
+    row("Foreign").locator(ctl("scene-load")).click()
+    wait_idle(page, scene)
+    check("a patch the case lacks is dropped, with a notice",
+          state()["request"]["patches"] == [] and "nope" in notice(), notice())
+
+    newer = out / "views-v2.json"
+    newer.write_text(json.dumps({"format": "equa-cfd-views", "version": 2}))
+    page.set_input_files(ctl("views-file"), str(newer))
+    page.wait_for_timeout(300)
+    check("a newer file is refused and changes nothing",
+          "newer viewer" in notice() and len(scene_names()) == 3, notice())
+
+    page.evaluate("() => { Storage.prototype.setItem = () => {"
+                  " throw new DOMException('full', 'QuotaExceededError') } }")
+    save_scene("Unsaved")
+    # The imported scene's camera and plane are hotRoom's, outside cavity (D6):
+    # reframe before looking at the picture.
+    page.click(".stage canvas", position={"x": 5, "y": 5})
+    page.keyboard.press("r")
+    page.wait_for_timeout(900)
+    colours = gl_colours(page)
+    check("a failed save shows a notice and the viewer keeps working",
+          "not saved" in notice() and colours >= 40, f"{notice()} {colours} colours")
+    shot(page, out / "08-saved-views.png")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--case", default="hotRoom")
@@ -1152,6 +1396,10 @@ def main():
             check("no page or console errors", not errors,
                   "; ".join(errors[:3]) if errors else "")
             shot(page, out / "05-final.png")
+
+            views_checks(page, scene, out)
+            check("no page or console errors after saved views", not errors,
+                  "; ".join(errors[:3]) if errors else "")
 
             start_screen_checks(browser, cases, args, out)
             local_mode_checks(browser, args, out)

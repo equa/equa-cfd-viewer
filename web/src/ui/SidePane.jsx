@@ -5,6 +5,7 @@ import {
 } from '@tabler/icons-react'
 import { TOOLS, TOOL_PART } from '../scene/state.js'
 import { Head, LabelledSlider, SELECT } from './controls.jsx'
+import { Scenes } from './Scenes.jsx'
 import {
   BoundaryTool, ContourTool, CutPlaneTool, GeometryTool, GlyphTool, StreamTool,
 } from './tools.jsx'
@@ -45,6 +46,8 @@ const BUILDERS = {
 export function SidePane({
   meta, entries, onOpenCase, onShowCases, request, setRequest, appearance, setAppearance, setStyle, plane,
   comets, setComets, canAnimate, tubes, setTubes, domain,
+  views, viewsNotice, onDismissNotice, onSaveScene, onLoadScene, onRenameScene, onDeleteScene,
+  onExportViews, onImportViews,
 }) {
   const active = appearance.activeTool || 'cutplane'
   const setVisible = (part, on) => setAppearance({
@@ -86,6 +89,22 @@ export function SidePane({
           ? `${meta.cells.toLocaleString()} cells · ${meta.times.length} time step${meta.times.length === 1 ? '' : 's'}`
           : 'loading…'}
       </Text>
+
+      {meta && (
+        <Scenes
+          views={views}
+          notice={viewsNotice}
+          onDismiss={onDismissNotice}
+          onSave={onSaveScene}
+          onLoad={onLoadScene}
+          onRename={onRenameScene}
+          onDelete={onDeleteScene}
+          onExport={onExportViews}
+          onImport={onImportViews}
+        />
+      )}
+
+      <Divider my="sm" />
 
       <div className="toolstack">
         {TOOLS.map(({ key, title, icon }) => {

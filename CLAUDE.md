@@ -793,6 +793,28 @@ Verified: color=T locked to U gives the *same* geometry as color=U unlocked
 (217 vertices, isovalue 0.1153) with T-valued scalars. `Rescale` re-seeds the
 isovalues when following and deliberately leaves them alone when locked.
 
+### Saved views (2026-11-07)
+
+Scenes and the four camera slots of a case are one JSON document, the
+`equa-cfd-views` format (openspec `saved-views-train` C1, car
+`scenes-and-cameras`).
+
+- `web/src/views/document.js` owns the format: `sceneFrom`, `applyScene`,
+  `readViews`, `importViews`. Pure functions; `tests/test_views_document.py`
+  runs them under Node (no JS test runner exists).
+- A store has only `load(caseId)` and `save(caseId, doc)` (C2).
+  `localStore.js` keeps it in `localStorage` under
+  `equa-cfd-viewer:views:<caseId>`; car B adds a store in the case.
+- A scene is the whole `request` and `appearance` minus `case`,
+  `time_index`, `theme`, `activeTool` and `tubes.sized`. `applyScene` merges
+  it over the case defaults, so only keys the defaults have survive. A new
+  setting needs no migration, a removed one is dropped.
+- Loading sets `keepContour` in `App.jsx` so the isosurface reseed effect
+  does not overwrite the scene's contour values.
+- The case id is a hash of the search root and relative path
+  (`sources.case_id`): moving a case orphans its views. Export is the way
+  across (`tests/test_case_id.py`).
+
 ### Concurrency
 
 Extraction runs in a worker thread (`asyncio.to_thread`) behind a single lock

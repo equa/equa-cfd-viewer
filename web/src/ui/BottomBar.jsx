@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ActionIcon, Divider, Group, Slider, Text, Tooltip } from '@mantine/core'
-import { IconPlayerPause, IconPlayerPlay, IconRefresh } from '@tabler/icons-react'
+import { IconDeviceFloppy, IconPlayerPause, IconPlayerPlay, IconRefresh } from '@tabler/icons-react'
 import { VIEW_BUTTONS } from '../scene/state.js'
+import { SLOTS } from '../views/document.js'
 
 /*
  * The floating strip over the 3D view: camera presets left, time controls right.
@@ -17,7 +18,9 @@ import { VIEW_BUTTONS } from '../scene/state.js'
  * stepping back to a step you have already seen costs nothing at all.
  */
 
-export function BottomBar({ meta, request, setRequest, onView, onRefreshTimes }) {
+export function BottomBar({
+  meta, request, setRequest, onView, onRefreshTimes, cameras, onLoadCamera, onStoreCamera,
+}) {
   const times = meta?.times || []
   const last = Math.max(times.length - 1, 0)
   const index = Math.min(request.time_index ?? last, last)
@@ -55,6 +58,10 @@ export function BottomBar({ meta, request, setRequest, onView, onRefreshTimes })
           </button>
         ))}
       </Group>
+
+      <Divider orientation="vertical" mx={6} />
+
+      <CameraSlots cameras={cameras} onLoad={onLoadCamera} onStore={onStoreCamera} />
 
       <Divider orientation="vertical" mx={6} />
 
@@ -103,5 +110,62 @@ export function BottomBar({ meta, request, setRequest, onView, onRefreshTimes })
         </ActionIcon>
       </Tooltip>
     </div>
+  )
+}
+
+/* Four saved cameras (openspec saved-views-train D3). A plain click loads; Save
+ * arms one store, so a stray click never overwrites a camera. */
+function CameraSlots({ cameras, onLoad, onStore }) {
+  const [arming, setArming] = useState(false)
+
+  useEffect(() => {
+    if (!arming) return undefined
+    const key = (e) => { if (e.key === 'Escape') setArming(false) }
+    window.addEventListener('keydown', key, true)
+    return () => window.removeEventListener('keydown', key, true)
+  }, [arming])
+
+  const click = (slot) => {
+    if (arming) {
+      onStore(slot)
+      setArming(false)
+    } else if (cameras[slot]) {
+      onLoad(slot)
+    }
+  }
+
+  return (
+    <Group gap={2} wrap="nowrap">
+      {SLOTS.map((slot) => {
+        const filled = !!cameras[slot]
+        const tip = arming ? `Store the camera in ${slot}`
+          : filled ? `Camera ${slot}` : 'Empty: Save, then click to store'
+        return (
+          <Tooltip key={slot} label={tip} openDelay={400}>
+            <button
+              type="button"
+              className={`viewbtn camslot${filled ? '' : ' empty'}${arming ? ' arming' : ''}`}
+              onClick={() => click(slot)}
+              data-ctl={`cam-${slot}`}
+              data-filled={filled}
+            >
+              {slot}
+            </button>
+          </Tooltip>
+        )
+      })}
+      <Tooltip label={arming ? 'Cancel (Esc)' : 'Save the camera: then click a slot'} openDelay={400}>
+        <ActionIcon
+          variant={arming ? 'filled' : 'subtle'}
+          size="sm"
+          onClick={() => setArming((a) => !a)}
+          data-ctl="cam-save"
+          data-arming={arming}
+          aria-label="Save the camera"
+        >
+          <IconDeviceFloppy size={15} stroke={1.8} />
+        </ActionIcon>
+      </Tooltip>
+    </Group>
   )
 }

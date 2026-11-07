@@ -210,6 +210,29 @@ body {
 
 .viewbtn:hover { border-color: var(--mantine-primary-color-filled); }
 
+/* Saved scenes: compact rows, the name a button that loads. */
+.scenerow { display: flex; align-items: center; gap: 2px; }
+.scenebtn {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--mantine-radius-sm);
+  background: none;
+  color: var(--mantine-color-text);
+  font: 12px/1.4 inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.scenebtn:hover { background: var(--mantine-color-default-hover); }
+
+/* Saved camera slots: dimmed while empty, outlined while Save waits for one. */
+.camslot.empty { opacity: 0.45; }
+.camslot.arming { border-color: var(--mantine-primary-color-filled); opacity: 1; }
+
 /* ── busy overlay ────────────────────────────────────────── */
 
 /*

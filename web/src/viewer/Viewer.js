@@ -935,6 +935,23 @@ export class Viewer {
       position: this.camera.position.toArray(),
       target: this.controls.target.toArray(),
       up: this.camera.up.toArray(),
+      fov: this.camera.fov,
     }
+  }
+
+  /* A saved camera (openspec scenes-and-cameras A5). Damping keeps easing an
+   * orbit after release, so the leftover motion is flushed first; otherwise it
+   * would carry on from the restored view. */
+  set_camera({ position, target, up, fov }) {
+    this.controls.enableDamping = false
+    this.controls.update()
+    this.camera.up.fromArray(up)
+    this.controls.object.up.fromArray(up)
+    this.controls.target.fromArray(target)
+    this.camera.position.fromArray(position)
+    this.camera.fov = fov
+    this.camera.updateProjectionMatrix()
+    this.controls.update()
+    this.controls.enableDamping = true
   }
 }
