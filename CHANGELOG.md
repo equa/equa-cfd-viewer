@@ -1,3 +1,9 @@
+## [1.0.0-beta.19](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.18...v1.0.0-beta.19) (2026-11-07)
+
+### Features
+
+* **viz:** save scenes and camera slots per case ([7d91f93](https://github.com/equa/equa-cfd-viewer/commit/7d91f93c903e99b5333135a3a36e2d03541b4c23))
+
 ## [1.0.0-beta.18](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.17...v1.0.0-beta.18) (2026-11-07)
 
 ### Features
