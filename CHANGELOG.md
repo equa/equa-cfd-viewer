@@ -1,3 +1,9 @@
+## [1.0.0-beta.18](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.17...v1.0.0-beta.18) (2026-11-07)
+
+### Features
+
+* **viz:** instance arrows in the browser from server anchors ([51c0d6d](https://github.com/equa/equa-cfd-viewer/commit/51c0d6d624e1c67bd4fb53428b9514e6f30f1c92))
+
 ## [1.0.0-beta.17](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2026-11-06)
 
 ### Bug Fixes
