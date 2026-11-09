@@ -21,7 +21,7 @@
 
 ARG PYTHON_IMAGE=python:3.14-slim-trixie
 ARG NODE_IMAGE=node:26-slim
-ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.6
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.7
 
 # ── web ──────────────────────────────────────────────────────────────────────
 # The client. Public npm only; no token reaches this build.
