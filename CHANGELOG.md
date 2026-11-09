@@ -1,3 +1,9 @@
+## [1.0.0-beta.20](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.19...v1.0.0-beta.20) (2026-11-09)
+
+### Features
+
+* **viz:** default to reversed Spectral and serve map labels ([d2a22f4](https://github.com/equa/equa-cfd-viewer/commit/d2a22f4ebdf3d98660068c5778c85eb22afe7bbd))
+
 ## [1.0.0-beta.19](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.18...v1.0.0-beta.19) (2026-11-07)
 
 ### Features
