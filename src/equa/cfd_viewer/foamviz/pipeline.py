@@ -89,7 +89,7 @@ class FoamPipeline:
         self._baked_contour = None
         self.vector_field = None
         self.color_range = (0.0, 1.0)
-        self.preset = "coolwarm"
+        self.preset = colors.DEFAULT_PRESET
         # Colour the surface/slice by true cell values (flat per cell) rather
         # than the reader's point-interpolated (smooth) values.
         self.use_cell_data = False

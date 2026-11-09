@@ -24,17 +24,6 @@ import { Head, NumberField, SELECT, Tag, stepFor, useDeferred } from './controls
  * `server`/`client` tags in the popover say which is which.
  */
 
-const PRESET_LABEL = {
-  coolwarm: 'Cool → warm',
-  viridis: 'Viridis',
-  plasma: 'Plasma',
-  inferno: 'Inferno',
-  magma: 'Magma',
-  jet: 'Jet',
-  turbo: 'Turbo',
-  rainbow: 'Rainbow',
-}
-
 export function TopBar({
   meta, request, setRequest, appearance, setAppearance, onRescale, onScreenshot,
 }) {
@@ -79,7 +68,7 @@ export function TopBar({
       />
       <Select
         {...SELECT}
-        data={(meta?.presets || []).map((p) => ({ value: p, label: PRESET_LABEL[p] || p }))}
+        data={(meta?.presets || []).map((p) => ({ value: p, label: meta.presetLabels?.[p] || p }))}
         value={appearance.preset}
         onChange={(v) => v && setAppearance({ preset: v })}
         style={{ width: 140 }}

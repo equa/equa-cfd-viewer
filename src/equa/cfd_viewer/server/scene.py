@@ -219,6 +219,7 @@ class SceneSource:
             "vectorField": p.vector_field,
             "hasGeometry": p.has_geometry,
             "presets": colors.PRESET_NAMES,
+            "presetLabels": colors.PRESET_LABELS,
             "partInputs": PART_INPUTS,
         }
 

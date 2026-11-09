@@ -208,7 +208,7 @@ def make_app(source, mode="server", root_path="", local=None):
         than approximately. Cached hard on the client: a preset switch is a
         texture upload, never a geometry request.
         """
-        name = request.query.get("name", "coolwarm")
+        name = request.query.get("name", colors.DEFAULT_PRESET)
         if name not in colors.PRESET_NAMES:
             raise web.HTTPBadRequest(text=f"no preset {name!r}")
         return web.Response(

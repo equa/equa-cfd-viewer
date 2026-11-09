@@ -93,7 +93,7 @@ export function initialRequest(meta) {
 
 export function initialAppearance(theme) {
   return {
-    preset: 'coolwarm',
+    preset: 'Spectral_r', // colors.DEFAULT_PRESET
     autoRange: true,
     range: [0, 1],
     bands: 0,

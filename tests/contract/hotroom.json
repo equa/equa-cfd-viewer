@@ -10,7 +10,7 @@
      {
       "cells": 500,
       "decomposed": false,
-      "id": "f15f84cfd275",
+      "id": "80dda7767aff",
       "label": "hotRoom",
       "name": "hotRoom",
       "path": "hotRoom"
@@ -47,7 +47,7 @@
      10.0
     ],
     "case": "hotRoom",
-    "caseId": "f15f84cfd275",
+    "caseId": "80dda7767aff",
     "caseLabel": "hotRoom",
     "cases": [
      "hotRoom"
@@ -150,7 +150,19 @@
      "fixedWalls"
     ],
     "points": 726,
+    "presetLabels": {
+     "RdBu_r": "Blue-Red",
+     "Spectral_r": "Spectral",
+     "coolwarm": "Cool to Warm",
+     "gray": "Greyscale",
+     "inferno": "Inferno",
+     "jet": "Jet",
+     "plasma": "Plasma",
+     "turbo": "Turbo",
+     "viridis": "Viridis"
+    },
     "presets": [
+     "Spectral_r",
      "coolwarm",
      "viridis",
      "plasma",
@@ -158,7 +170,6 @@
      "turbo",
      "jet",
      "RdBu_r",
-     "Spectral_r",
      "gray"
     ],
     "scalarFields": [
@@ -421,6 +432,13 @@
   },
   {
    "kind": "bytes",
+   "path": "/api/lut?name=Spectral_r",
+   "sha256": "f641ca89be9889926f69aa54e491aabf3f9cfdb5a61e116cb33cc13e9ca0a26a",
+   "status": 200,
+   "type": "application/octet-stream"
+  },
+  {
+   "kind": "bytes",
    "path": "/api/lut?name=coolwarm",
    "sha256": "161fad279ef7b15f29821a492afe1365f2e253aeb6069ab6d562032d84b5ec6f",
    "status": 200,
@@ -465,13 +483,6 @@
    "kind": "bytes",
    "path": "/api/lut?name=RdBu_r",
    "sha256": "dc2f97fae8e1ee24890571a21a1a0e91ec14553c97c57edb0ee33c6413803625",
-   "status": 200,
-   "type": "application/octet-stream"
-  },
-  {
-   "kind": "bytes",
-   "path": "/api/lut?name=Spectral_r",
-   "sha256": "f641ca89be9889926f69aa54e491aabf3f9cfdb5a61e116cb33cc13e9ca0a26a",
    "status": 200,
    "type": "application/octet-stream"
   },

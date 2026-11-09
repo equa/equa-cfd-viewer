@@ -7,9 +7,11 @@ sampled RGB table, so what the legend promises is what the geometry shows.
 import matplotlib
 import vtk
 
-# Ordered so the perceptually-uniform and diverging maps come first; those are
-# the ones that are actually defensible for CFD post-processing.
+# Diverging and perceptually-uniform maps first: the defensible ones for CFD.
+# The first entry is the default; web/src/scene/state.js repeats it because the
+# appearance exists before /api/meta answers.
 PRESETS = [
+    ("Spectral_r", "Spectral"),
     ("coolwarm", "Cool to Warm"),
     ("viridis", "Viridis"),
     ("plasma", "Plasma"),
@@ -17,11 +19,12 @@ PRESETS = [
     ("turbo", "Turbo"),
     ("jet", "Jet"),
     ("RdBu_r", "Blue-Red"),
-    ("Spectral_r", "Spectral"),
     ("gray", "Greyscale"),
 ]
 
 PRESET_NAMES = [name for name, _ in PRESETS]
+PRESET_LABELS = dict(PRESETS)
+DEFAULT_PRESET = PRESET_NAMES[0]
 
 _N_SAMPLES = 256
 
