@@ -618,6 +618,9 @@ class FoamPipeline:
         """Bake ``COLOR_ARRAY`` into one attribute set (point or cell data)."""
         source = attr.GetArray(self.color_field)
         if source is None:
+            # A field this dataset lacks (BLOCK_COLORS on the internal mesh)
+            # must not leave the previous field's colours behind.
+            attr.RemoveArray(COLOR_ARRAY)
             return
         scalars = derive_scalars(vtk_to_numpy(source), self.color_component)
         baked = numpy_to_vtk(np.ascontiguousarray(scalars, dtype=np.float64), deep=1)

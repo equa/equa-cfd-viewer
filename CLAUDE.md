@@ -994,6 +994,16 @@ The cut plane is the hub — the slice and the stream-tracer seeds derive from i
   unlike mask-points on the cut faces which clump where the mesh is fine. "On
   isosurface" seeds off the contour output (mask-points). `update_glyphs` takes
   the plane axis+coord to size the grid.
+- **`vtkBlockColors` (2026-11-09)**: a boundary-only color field, each
+  patch's index in `FoamCase.patches` as point and cell data (`_tag_patches`).
+  It is in `case.color_fields` and `/api/meta`'s `patchField`, never in
+  `fields`, so the isosurface lock and the internal-field parts never see it.
+  `_bake_color` removes `COLOR_ARRAY` from a dataset lacking the field, which
+  sends the slice, streamlines and arrows scalar-less (solid) and leaves a
+  color-following isosurface empty; the shader draws a scalar-less part in its
+  solid color (`uColored * uHasScalar`), never the map's low end. The range is
+  padded by 0.5, and the client draws one band per id over it, ignoring the
+  user's range and bands, with the legend labelling ids at band centres.
 - **Arrows on the wire (2026-11-06)**: a `points` part, one anchor per arrow
   with `vector` and `scalar` (`glyph_points`, `wire.points_part`). The browser
   instances one arrow over them (`VERT_GLYPH`), so size and length-by-magnitude

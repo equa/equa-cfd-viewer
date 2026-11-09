@@ -15,7 +15,7 @@ import { Loader, Text } from '@mantine/core'
  * bar is still drawn fully opaque, so it over-promises. Showing the ramp means
  * compositing the bar over a checkerboard; not done.
  */
-export function Legend({ lut, range, bands, title }) {
+export function Legend({ lut, range, bands, title, ids = false }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -35,19 +35,31 @@ export function Legend({ lut, range, bands, title }) {
   }, [lut, bands])
 
   const [lo, hi] = range
-  const ticks = formatTicks([4, 3, 2, 1, 0].map((i) => lo + ((hi - lo) * i) / 4))
+  const ticks = ids
+    ? idTicks(lo, hi)
+    : formatTicks([4, 3, 2, 1, 0].map((i) => lo + ((hi - lo) * i) / 4))
 
   return (
     <div className="legend">
       <div className="legend-title">{title}</div>
       <div className="legend-body">
         <div className="legend-bar" ref={ref} />
-        <div className="legend-ticks">
+        <div className={ids ? 'legend-ticks ids' : 'legend-ticks'}>
           {ticks.map((t, i) => <span key={i}>{t}</span>)}
         </div>
       </div>
     </div>
   )
+}
+
+/* One slot per integer id, top down, centred on its band; a blank slot keeps
+ * the alignment where the bar is too short to label every id. */
+function idTicks(lo, hi) {
+  const first = Math.round(lo + 0.5)
+  const n = Math.max(Math.round(hi - lo), 1)
+  const stride = Math.ceil(n / 15)
+  return Array.from({ length: n }, (_, i) => first + n - 1 - i)
+    .map((id) => ((id - first) % stride === 0 ? String(id) : ''))
 }
 
 /*

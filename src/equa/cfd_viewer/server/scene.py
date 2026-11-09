@@ -27,7 +27,7 @@ import numpy as np
 from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 
 from ..foamviz import colors
-from ..foamviz.case import FIELD_UNITS, FoamCase
+from ..foamviz.case import BLOCK_COLORS, FIELD_UNITS, FoamCase
 from ..foamviz.pipeline import COLOR_ARRAY, FoamPipeline
 from . import wire
 
@@ -216,6 +216,9 @@ class SceneSource:
             "fields": dict(c.fields),
             "units": FIELD_UNITS,
             "colorField": p.color_field,
+            # A colour field of the boundary only; not in `fields`, which the
+            # isosurface and the internal-field parts choose from.
+            "patchField": BLOCK_COLORS if c.patches else None,
             "vectorField": p.vector_field,
             "hasGeometry": p.has_geometry,
             "presets": colors.PRESET_NAMES,
@@ -233,7 +236,7 @@ class SceneSource:
         of making it re-extract every visible part to deliver two floats.
         """
         case = self.case
-        if not field or case.fields.get(field) is None:
+        if not field or case.color_fields.get(field) is None:
             raise ValueError(f"no field {field!r} in {case.name}")
         lo, hi = case.field_range(field, component or "magnitude", robust=robust)
         if hi - lo < 1e-12:  # a uniform field still needs a drawable range
@@ -267,7 +270,7 @@ class SceneSource:
         # --- colour scalars ----------------------------------------------
         field = query.get("field") or pipe.color_field
         component = query.get("component") or "magnitude"
-        if not field or case.fields.get(field) is None:
+        if not field or case.color_fields.get(field) is None:
             raise ValueError(f"no field {field!r} in {case.name}")
         pipe.color_field = field
         pipe.color_component = component

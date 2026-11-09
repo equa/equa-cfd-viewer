@@ -29,6 +29,10 @@ SKIP_FIELDS = {"p", "alphat", "omega", "epsilon", "rho"}
 # Fields OpenFOAM stores in kelvin that we present in celsius (subtracted once at
 # read time, so every downstream range/legend/contour value is already °C).
 KELVIN_FIELDS = {"T"}
+
+# ParaView's name for the per-block colour id. Here it is the patch's index in
+# FoamCase.patches, so it survives deselecting other patches; boundary only.
+BLOCK_COLORS = "vtkBlockColors"
 CELSIUS_OFFSET = 273.15
 
 # Units for the legend title and the report caption. Lives here, next to the
@@ -253,10 +257,22 @@ class FoamCase:
                 self.boundary[name] = poly
             it.GoToNextItem()
 
+        self._tag_patches()
         self._to_celsius()
 
         if self.internal is not None:
             self.fields = self._describe_fields(self.internal)
+
+    def _tag_patches(self):
+        """Add BLOCK_COLORS as point and cell data, so neither association
+        blends two patches."""
+        for name, poly in self.boundary.items():
+            index = self.patches.index(name) if name in self.patches else -1
+            for attr, n in ((poly.GetPointData(), poly.GetNumberOfPoints()),
+                            (poly.GetCellData(), poly.GetNumberOfCells())):
+                arr = numpy_to_vtk(np.full(n, index, dtype=np.float64), deep=1)
+                arr.SetName(BLOCK_COLORS)
+                attr.AddArray(arr)
 
     def _to_celsius(self):
         """Convert kelvin fields (T) to celsius, once per read. Replaces the
@@ -298,6 +314,12 @@ class FoamCase:
     @property
     def vector_fields(self):
         return sorted(n for n, c in self.fields.items() if c == 3)
+
+    @property
+    def color_fields(self):
+        """Field name -> components for everything colouring can use: the
+        internal fields plus BLOCK_COLORS when the case has patches."""
+        return {**self.fields, BLOCK_COLORS: 1} if self.patches else dict(self.fields)
 
     def vector_field_available(self, name):
         return bool(name) and self.fields.get(name) == 3
@@ -345,6 +367,9 @@ class FoamCase:
         if allvals.size == 0:
             return (0.0, 1.0)
 
+        if field == BLOCK_COLORS:
+            # Half a unit of margin centres each patch id in its own band.
+            return (float(allvals.min()) - 0.5, float(allvals.max()) + 0.5)
         if robust:
             lo, hi = np.percentile(allvals, [1.0, 99.0])
         else:

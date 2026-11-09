@@ -56,7 +56,7 @@ export function applyScene(scene, meta, current) {
   request.time_index = current.request.time_index
   const defaults = initialRequest(meta)
   const skipped = []
-  if (!(request.field in meta.fields)) {
+  if (!(request.field in meta.fields) && request.field !== meta.patchField) {
     skipped.push(`field ${request.field}`)
     request.field = defaults.field
     request.component = defaults.component

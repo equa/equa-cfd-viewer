@@ -177,6 +177,8 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.legend-ticks.ids { justify-content: space-around; }
+
 
 /* ── bottom bar ──────────────────────────────────────────── */
 

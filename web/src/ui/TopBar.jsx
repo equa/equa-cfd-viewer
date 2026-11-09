@@ -27,7 +27,11 @@ import { Head, NumberField, SELECT, Tag, stepFor, useDeferred } from './controls
 export function TopBar({
   meta, request, setRequest, appearance, setAppearance, onRescale, onScreenshot,
 }) {
-  const fields = meta ? Object.keys(meta.fields).sort() : []
+  // The patch field goes last: it colours the boundary only.
+  const fields = meta
+    ? [...Object.keys(meta.fields).sort(), ...(meta.patchField ? [meta.patchField] : [])]
+    : []
+  const patchMode = !!meta?.patchField && request.field === meta.patchField
   const componentEnabled = !!meta && meta.fields[request.field] === 3
 
   // The range inputs are wheel-driven, so their step has to come from the range
@@ -121,6 +125,7 @@ export function TopBar({
             step={1}
             value={appearance.bands}
             onChange={(v) => setAppearance({ bands: Number(v) || 0 })}
+            disabled={patchMode}
             data-ctl="bands"
           />
           <Group grow gap="xs" mt="xs">
@@ -133,6 +138,7 @@ export function TopBar({
               onChange={(v) => setAppearance({
                 range: [Number(v), appearance.range[1]], autoRange: false,
               })}
+              disabled={patchMode}
               data-ctl="range-min"
             />
             <NumberField
@@ -144,6 +150,7 @@ export function TopBar({
               onChange={(v) => setAppearance({
                 range: [appearance.range[0], Number(v)], autoRange: false,
               })}
+              disabled={patchMode}
               data-ctl="range-max"
             />
           </Group>

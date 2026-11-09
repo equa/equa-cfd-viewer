@@ -34,6 +34,9 @@ export default function App() {
     ...initialAppearance(url.theme), activeTool: 'cutplane',
   }))
   const [lut, setLut] = useState(null)
+  // The server's range for a named field, kept apart from appearance.range so
+  // the patch field can show it whatever auto range says.
+  const [dataRange, setDataRange] = useState(null)
   const [stats, setStats] = useState({ fps: 0, triangles: 0, calls: 0 })
   // Whether the streamlines on the GPU actually carry travel time. Polled with
   // the stats rather than derived from state, because it depends on what the
@@ -213,11 +216,20 @@ export default function App() {
   // instant and provably causes no fetch (tests/check_client.py asserts zero
   // /api/scene requests for each of them).
 
-  useEffect(() => {
-    viewerRef.current?.setRange(appearance.range[0], appearance.range[1])
-  }, [appearance.range])
+  // The patch field shows one flat band per patch id over the server's
+  // range, which centres each id in its band; the user's range and bands
+  // stay untouched for the next real field.
+  const patchMode = !!meta?.patchField && request?.field === meta.patchField
+    && dataRange?.field === request.field
+  const shownRange = patchMode ? dataRange.range : appearance.range
+  const shownBands = patchMode
+    ? Math.round(dataRange.range[1] - dataRange.range[0]) : appearance.bands
 
-  useEffect(() => { viewerRef.current?.setBands(appearance.bands) }, [appearance.bands])
+  useEffect(() => {
+    viewerRef.current?.setRange(shownRange[0], shownRange[1])
+  }, [shownRange])
+
+  useEffect(() => { viewerRef.current?.setBands(shownBands) }, [shownBands])
 
   useEffect(() => {
     for (const [part, style] of Object.entries(appearance.styles)) {
@@ -253,6 +265,7 @@ export default function App() {
 
   const onHeader = useCallback((header) => {
     // Auto range tracks the data as field or time changes; manual leaves it be.
+    setDataRange({ field: header.field, range: header.range })
     setAppearanceState((a) => (a.autoRange ? { ...a, range: header.range } : a))
   }, [])
 
@@ -313,7 +326,9 @@ export default function App() {
       component: request.component,
       robust: request.robust ? 1 : 0,
     }).then(({ range }) => {
-      if (!cancelled) setAppearanceState((a) => (a.autoRange ? { ...a, range } : a))
+      if (cancelled) return
+      setDataRange({ field: request.field, range })
+      setAppearanceState((a) => (a.autoRange ? { ...a, range } : a))
     }).catch(() => {})
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -545,8 +560,9 @@ export default function App() {
           <Hud info={info} stats={stats} />
           <Legend
             lut={lut}
-            range={appearance.range}
-            bands={appearance.bands}
+            range={shownRange}
+            bands={shownBands}
+            ids={patchMode}
             title={legendTitle}
           />
           <BottomBar

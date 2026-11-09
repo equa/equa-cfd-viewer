@@ -176,7 +176,7 @@ PyPI, frozen at 9.3.1, CPython 3.12 at most.
 
 | Tool | What you get |
 |---|---|
-| **Color** (top bar) | Any field the case contains; magnitude or X/Y/Z for vectors; nine color maps; automatic, percentile (1–99 %) or manual range; discrete bands; opacity weighted by value |
+| **Color** (top bar) | Any field the case contains; magnitude or X/Y/Z for vectors; `vtkBlockColors`, one flat color per boundary patch id (the slice, streamlines and arrows go uncolored); nine color maps; automatic, percentile (1–99 %) or manual range; discrete bands; opacity weighted by value |
 | **Cut plane** | An X/Y/Z-aligned plane positioned by world coordinate — the anchor for everything below. Optionally a *crinkle* slice: the true cell layer rather than a flat cut |
 | **Boundary** | The room shell, neutral or field-colored, with near-wall culling so you can see in, mesh edges, opacity, cut-away-at-plane, and per-patch read selection |
 | **Isosurfaces** | 1 / 3 / 5 nested isosurfaces of the colored field, or **locked** to a field of their own — so you can contour speed and color by temperature |

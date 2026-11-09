@@ -138,8 +138,8 @@ export const FRAG = /* glsl */`
   uniform float uColored;
   uniform vec3 uFlat;
   // 1 only when the geometry really carries a scalar attribute. Without this
-  // guard a scalar-less part would read vScalar == 0 and vanish under the
-  // opacity ramp.
+  // guard a scalar-less part would read vScalar == 0: the lowest colour, and
+  // invisible under the opacity ramp.
   uniform float uHasScalar;
   varying float vScalar;
   varying vec3 vNormal;
@@ -147,7 +147,7 @@ export const FRAG = /* glsl */`
   ${COMET}
   void main() {
     float t = clamp((vScalar - uRange.x) / max(uRange.y - uRange.x, 1e-12), 0.0, 1.0);
-    vec3 base = mix(uFlat, texture2D(uLut, vec2(band(t, uBands), 0.5)).rgb, uColored);
+    vec3 base = mix(uFlat, texture2D(uLut, vec2(band(t, uBands), 0.5)).rgb, uColored * uHasScalar);
     vec3 n = normalize(vNormal);
     float key = abs(dot(n, normalize(vec3(0.35, 0.65, 0.55))));
     float fill = abs(dot(n, normalize(vec3(-0.6, -0.25, 0.5)))) * 0.35;
@@ -180,6 +180,6 @@ export const FRAG_LINE = /* glsl */`
     float glow = cometGlow();
     alpha *= mix(cometDim(), 1.0, glow);
     if (alpha < 0.01) discard;
-    vec3 base = mix(uFlat, texture2D(uLut, vec2(band(t, uBands), 0.5)).rgb, uColored);
+    vec3 base = mix(uFlat, texture2D(uLut, vec2(band(t, uBands), 0.5)).rgb, uColored * uHasScalar);
     gl_FragColor = vec4(cometTint(base, glow), alpha);
   }`
