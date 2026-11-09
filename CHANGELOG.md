@@ -1,3 +1,9 @@
+## [1.0.0-beta.21](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.20...v1.0.0-beta.21) (2026-11-09)
+
+### Features
+
+* **viz:** color the boundary by patch id with vtkBlockColors ([de833e9](https://github.com/equa/equa-cfd-viewer/commit/de833e90353d181ce2d4b62a5856fb5b4bf521d5))
+
 ## [1.0.0-beta.20](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.19...v1.0.0-beta.20) (2026-11-09)
 
 ### Features
