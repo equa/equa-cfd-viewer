@@ -1,3 +1,10 @@
+## [1.0.0-beta.22](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.21...v1.0.0-beta.22) (2026-11-12)
+
+### Features
+
+* **viz:** align the frame with the cockpit: pane right, 56px toolbar ([d538a90](https://github.com/equa/equa-cfd-viewer/commit/d538a90b64d8951dcfc72bed83f5e80d0fa1eb03))
+* **viz:** case breadcrumb and scenes in the toolbar, titled pane sections ([060f2f8](https://github.com/equa/equa-cfd-viewer/commit/060f2f8bdafacaccfb0926e506572bb47ecfd0e3))
+
 ## [1.0.0-beta.21](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.20...v1.0.0-beta.21) (2026-11-09)
 
 ### Features
