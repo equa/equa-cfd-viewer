@@ -31,6 +31,17 @@ export function Tag({ kind }) {
   )
 }
 
+/* A side-pane section title, as the cockpit's settings sections: small capitals
+ * over a rule. `right` takes a control, else the server/client tag. */
+export function SectionTitle({ children, kind, right }) {
+  return (
+    <div className="section-title">
+      <span>{children}</span>
+      {right ?? (kind ? <Tag kind={kind} /> : null)}
+    </div>
+  )
+}
+
 export function Head({ children, kind }) {
   return (
     <Group justify="space-between" gap="xs" mb={6} wrap="nowrap">

@@ -1,27 +1,23 @@
-import { Accordion, ActionIcon, Divider, Group, Select, Text, Tooltip } from '@mantine/core'
+import { useState } from 'react'
+import { ActionIcon, Collapse, Group, Text, Tooltip } from '@mantine/core'
 import {
-  IconArrowUpRight, IconBlur, IconBulb, IconCube, IconEye, IconEyeOff,
-  IconHome, IconLayoutList, IconSquare, IconVector,
+  IconArrowUpRight, IconBlur, IconBulb, IconChevronDown, IconChevronRight, IconCube, IconEye,
+  IconEyeOff, IconHome, IconSquare, IconVector,
 } from '@tabler/icons-react'
 import { TOOLS, TOOL_PART } from '../scene/state.js'
-import { Head, LabelledSlider, SELECT } from './controls.jsx'
-import { Scenes } from './Scenes.jsx'
+import { LabelledSlider, SectionTitle } from './controls.jsx'
 import {
   BoundaryTool, ContourTool, CutPlaneTool, GeometryTool, GlyphTool, StreamTool,
 } from './tools.jsx'
 
 /*
- * The side pane: case at the top, then the vertical tool stack, then the
- * selected tool's settings, then Lighting collapsed at the bottom.
+ * The side pane, in three titled sections: the objects (a row's button picks
+ * which settings show, its eye toggles what is drawn -- you routinely want a
+ * slice and streamlines both visible while tuning one), the picked object's
+ * settings, and Lighting, folded by default.
  *
- * Straight from the Trame layout, including the division of labour that made it
- * work: a tool row's *button* selects which settings show, and its *eye*
- * toggles what is drawn. Those are separate on purpose -- you routinely want a
- * slice and streamlines both visible while tuning only one of them.
- *
- * The panels are kept mounted and merely hidden, as they were under `v-show`,
- * so a tool switch does not throw away a half-typed value or a draft that has
- * not been applied yet.
+ * The settings panels stay mounted and merely hidden, so a tool switch does not
+ * throw away a half-typed value or a draft that has not been applied yet.
  */
 
 // Tool key -> icon, kept beside BUILDERS so adding a tool is one place.
@@ -44,11 +40,10 @@ const BUILDERS = {
 }
 
 export function SidePane({
-  meta, entries, onOpenCase, onShowCases, request, setRequest, appearance, setAppearance, setStyle, plane,
+  meta, request, setRequest, appearance, setAppearance, setStyle, plane,
   comets, setComets, canAnimate, tubes, setTubes, domain,
-  views, viewsNotice, onDismissNotice, onSaveScene, onLoadScene, onRenameScene, onDeleteScene,
-  onExportViews, onImportViews,
 }) {
+  const [lightingOpen, setLightingOpen] = useState(false)
   const active = appearance.activeTool || 'cutplane'
   const setVisible = (part, on) => setAppearance({
     visible: { ...appearance.visible, [part]: on },
@@ -56,56 +51,8 @@ export function SidePane({
 
   return (
     <div className="sidepane">
-      {/* The same entries as the start screen, opened by id: two cases may
-          share a directory name. Until the list arrives, the open case alone. */}
-      <Group gap={4} wrap="nowrap" mb={4}>
-        <Select
-          {...SELECT}
-          style={{ flex: 1 }}
-          data={caseOptions(entries, meta, request.case)}
-          value={request.case || null}
-          onChange={(v) => v && v !== request.case && onOpenCase(v)}
-          renderOption={({ option }) => (
-            <div>
-              <Text size="xs">{option.label}</Text>
-              {option.detail && <Text size="xs" c="dimmed">{option.detail}</Text>}
-            </div>
-          )}
-          searchable={entries.length > 8}
-          allowDeselect={false}
-          data-ctl="case"
-        />
-        {/* The start screen over the open case: the cache button and, in local
-            mode, "Add folder" live there (openspec ice-project-zips, D10). */}
-        <Tooltip label="All cases">
-          <ActionIcon variant="subtle" color="gray" aria-label="All cases"
-            onClick={onShowCases} data-ctl="all-cases">
-            <IconLayoutList size={16} stroke={1.8} />
-          </ActionIcon>
-        </Tooltip>
-      </Group>
-      <Text size="xs" c="dimmed" mb="sm">
-        {meta
-          ? `${meta.cells.toLocaleString()} cells · ${meta.times.length} time step${meta.times.length === 1 ? '' : 's'}`
-          : 'loading…'}
-      </Text>
-
-      {meta && (
-        <Scenes
-          views={views}
-          notice={viewsNotice}
-          onDismiss={onDismissNotice}
-          onSave={onSaveScene}
-          onLoad={onLoadScene}
-          onRename={onRenameScene}
-          onDelete={onDeleteScene}
-          onExport={onExportViews}
-          onImport={onImportViews}
-        />
-      )}
-
-      <Divider my="sm" />
-
+      <section className="section">
+        <SectionTitle>Objects</SectionTitle>
       <div className="toolstack">
         {TOOLS.map(({ key, title, icon }) => {
           const part = TOOL_PART[key]
@@ -141,15 +88,14 @@ export function SidePane({
           )
         })}
       </div>
-
-      <Divider my="sm" />
+      </section>
 
       {meta ? TOOLS.map(({ key, title, kind }) => {
         const Tool = BUILDERS[key]
         const part = TOOL_PART[key]
         return (
-          <div key={key} hidden={active !== key} className="toolpanel">
-            <Head kind={kind}>{title}</Head>
+          <section key={key} hidden={active !== key} className="section toolpanel">
+            <SectionTitle kind={kind}>{title}</SectionTitle>
             <Tool
               meta={meta}
               request={request}
@@ -164,20 +110,24 @@ export function SidePane({
               setTubes={setTubes}
               domain={domain}
             />
-          </div>
+          </section>
         )
       }) : null}
 
-      {/* Scene lighting: global, mostly fine-tuning, so it lives collapsed at
-          the bottom of the pane as it does in the Trame app. Here the sliders
-          drive shader uniforms rather than actor properties, so they are live
-          and free -- the light kit toggle just zeroes the directional term. */}
-      <Accordion variant="filled" chevronPosition="left" mt="md">
-        <Accordion.Item value="lighting">
-          <Accordion.Control icon={<IconBulb size={15} stroke={1.6} />}>
-            <Text size="xs" fw={600} tt="uppercase" c="dimmed">Lighting</Text>
-          </Accordion.Control>
-          <Accordion.Panel>
+      {/* Global fine-tuning; the sliders drive shader uniforms, so they are live. */}
+      <section className="section">
+        <SectionTitle
+          right={(
+            <ActionIcon variant="subtle" size="sm" color="gray"
+              onClick={() => setLightingOpen((o) => !o)} data-ctl="lighting-toggle"
+              aria-label={lightingOpen ? 'Fold Lighting' : 'Unfold Lighting'}>
+              {lightingOpen ? <IconChevronDown size={15} /> : <IconChevronRight size={15} />}
+            </ActionIcon>
+          )}
+        >
+          Lighting
+        </SectionTitle>
+        <Collapse expanded={lightingOpen}>
             <Group justify="space-between" mb={6}>
               <Text size="xs" c="dimmed">Light kit</Text>
               <ActionIcon
@@ -217,21 +167,9 @@ export function SidePane({
               })}
               data-ctl="light-diffuse"
             />
-          </Accordion.Panel>
-        </Accordion.Item>
-      </Accordion>
+        </Collapse>
+      </section>
     </div>
   )
 }
 
-
-function caseOptions(entries, meta, current) {
-  if (entries.length) {
-    return entries.map((e) => ({
-      value: e.id,
-      label: e.label,
-      detail: e.label !== e.name ? `${e.name} · ${e.id}` : `${e.path} · ${e.id}`,
-    }))
-  }
-  return meta && current ? [{ value: current, label: meta.caseLabel ?? meta.case }] : []
-}

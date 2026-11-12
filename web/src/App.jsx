@@ -527,6 +527,18 @@ export default function App() {
         setAppearance={setAppearance}
         onRescale={onRescale}
         onScreenshot={onScreenshot}
+        onShowCases={showCases}
+        scenes={{
+          views,
+          notice: viewsNotice,
+          onDismiss: () => setViewsNotice(null),
+          onSave: onSaveScene,
+          onLoad: onLoadScene,
+          onRename: onRenameScene,
+          onDelete: onDeleteScene,
+          onExport: onExportViews,
+          onImport: onImportViews,
+        }}
       />
       <div className="body">
         <div className="stage" ref={stageRef}>
@@ -556,9 +568,6 @@ export default function App() {
         </div>
         <SidePane
           meta={meta}
-          entries={entries}
-          onOpenCase={openCase}
-          onShowCases={showCases}
           request={req}
           setRequest={setRequest}
           appearance={appearance}
@@ -571,15 +580,6 @@ export default function App() {
           tubes={appearance.tubes}
           setTubes={setTubes}
           domain={domain}
-          views={views}
-          viewsNotice={viewsNotice}
-          onDismissNotice={() => setViewsNotice(null)}
-          onSaveScene={onSaveScene}
-          onLoadScene={onLoadScene}
-          onRenameScene={onRenameScene}
-          onDeleteScene={onDeleteScene}
-          onExportViews={onExportViews}
-          onImportViews={onImportViews}
         />
       </div>
       {start.show && (

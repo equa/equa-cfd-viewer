@@ -1,74 +1,87 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ActionIcon, Alert, Button, Checkbox, Group, Menu, Popover, ScrollArea, Text, TextInput, Tooltip,
 } from '@mantine/core'
 import {
-  IconDeviceFloppy, IconDots, IconDownload, IconPencil, IconTrash, IconUpload,
+  IconChevronDown, IconDeviceFloppy, IconDots, IconDownload, IconPencil, IconTrash, IconUpload,
 } from '@tabler/icons-react'
 import { INPUT } from './controls.jsx'
 
 /*
- * Saved scenes of the open case, under the case selector (openspec
- * saved-views-train D4; scenes-and-cameras A6-A10). Click a row to load it.
+ * Saved scenes of the open case, in the toolbar (openspec saved-views-train
+ * D4; scenes-and-cameras A6-A10): the list behind a Scenes button, Save,
+ * Export and Import beside it. Click a row to load it. A notice opens the list,
+ * since that is where it shows.
  */
 
 export function Scenes({
   views, notice, onDismiss, onSave, onLoad, onRename, onDelete, onExport, onImport,
 }) {
   const fileRef = useRef(null)
+  const [open, setOpen] = useState(false)
+  // A row menu is a portal of its own, so a click in it reads as outside the list.
+  const menuOpen = useRef(false)
   const names = views.scenes.map((s) => s.name)
 
+  useEffect(() => { if (notice) setOpen(true) }, [notice])
+
   return (
-    <div className="scenes" data-ctl="scenes">
-      <Group justify="space-between" gap={4} wrap="nowrap" mb={2}>
-        <Text size="xs" fw={600} tt="uppercase" c="dimmed">Scenes</Text>
-        <Group gap={2} wrap="nowrap">
-          <SaveScene names={names} onSave={onSave} />
-          <Tooltip label="Export scenes and cameras to a file" openDelay={600}>
-            <ActionIcon variant="subtle" size="sm" onClick={onExport} data-ctl="views-export"
-              aria-label="Export views">
-              <IconDownload size={15} stroke={1.8} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Import scenes and cameras from a file" openDelay={600}>
-            <ActionIcon variant="subtle" size="sm" onClick={() => fileRef.current?.click()}
-              data-ctl="views-import" aria-label="Import views">
-              <IconUpload size={15} stroke={1.8} />
-            </ActionIcon>
-          </Tooltip>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".json,application/json"
-            hidden
-            data-ctl="views-file"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              e.target.value = ''
-              if (file) onImport(file)
-            }}
-          />
-        </Group>
-      </Group>
-
-      {views.scenes.length === 0 && (
-        <Text size="xs" c="dimmed" data-ctl="scenes-empty">No saved scenes.</Text>
-      )}
-      <ScrollArea.Autosize mah={6 * 26}>
-        {views.scenes.map((s) => (
-          <SceneRow key={s.name} scene={s} names={names}
-            onLoad={onLoad} onRename={onRename} onDelete={onDelete} />
-        ))}
-      </ScrollArea.Autosize>
-
-      {notice && (
-        <Alert color={notice.color} variant="light" withCloseButton onClose={onDismiss}
-          p={6} mt={4} styles={{ message: { fontSize: 'var(--mantine-font-size-xs)' } }}
-          data-ctl="views-notice">
-          {notice.text}
-        </Alert>
-      )}
-    </div>
+    <Group gap={2} wrap="nowrap" data-ctl="scenes">
+      <Popover opened={open} onChange={(o) => { if (o || !menuOpen.current) setOpen(o) }}
+        position="bottom-end" width={240}
+        withinPortal shadow="md">
+        <Popover.Target>
+          <Button size="xs" variant="subtle" color="gray" data-ctl="scenes-open"
+            rightSection={<IconChevronDown size={14} stroke={1.8} />}
+            onClick={() => setOpen((o) => !o)}>
+            Scenes{names.length ? ` (${names.length})` : ''}
+          </Button>
+        </Popover.Target>
+        <Popover.Dropdown p="xs" data-ctl="scenes-list">
+          {views.scenes.length === 0 && (
+            <Text size="xs" c="dimmed" data-ctl="scenes-empty">No saved scenes.</Text>
+          )}
+          <ScrollArea.Autosize mah={10 * 26}>
+            {views.scenes.map((s) => (
+              <SceneRow key={s.name} scene={s} names={names} menuOpen={menuOpen}
+                onLoad={onLoad} onRename={onRename} onDelete={onDelete} />
+            ))}
+          </ScrollArea.Autosize>
+          {notice && (
+            <Alert color={notice.color} variant="light" withCloseButton onClose={onDismiss}
+              p={6} mt={4} styles={{ message: { fontSize: 'var(--mantine-font-size-xs)' } }}
+              data-ctl="views-notice">
+              {notice.text}
+            </Alert>
+          )}
+        </Popover.Dropdown>
+      </Popover>
+      <SaveScene names={names} onSave={onSave} />
+      <Tooltip label="Export scenes and cameras to a file" openDelay={600}>
+        <ActionIcon variant="subtle" size="md" onClick={onExport} data-ctl="views-export"
+          aria-label="Export views">
+          <IconDownload size={16} stroke={1.8} />
+        </ActionIcon>
+      </Tooltip>
+      <Tooltip label="Import scenes and cameras from a file" openDelay={600}>
+        <ActionIcon variant="subtle" size="md" onClick={() => fileRef.current?.click()}
+          data-ctl="views-import" aria-label="Import views">
+          <IconUpload size={16} stroke={1.8} />
+        </ActionIcon>
+      </Tooltip>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        data-ctl="views-file"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (file) onImport(file)
+        }}
+      />
+    </Group>
   )
 }
 
@@ -88,9 +101,9 @@ function SaveScene({ names, onSave }) {
     <Popover opened={open} onChange={setOpen} position="bottom-end" withinPortal trapFocus>
       <Popover.Target>
         <Tooltip label="Save the current scene" openDelay={600}>
-          <ActionIcon variant="subtle" size="sm" data-ctl="scene-save" aria-label="Save scene"
+          <ActionIcon variant="subtle" size="md" data-ctl="scene-save" aria-label="Save scene"
             onClick={() => { setName(''); setWithCamera(false); setOpen((o) => !o) }}>
-            <IconDeviceFloppy size={15} stroke={1.8} />
+            <IconDeviceFloppy size={16} stroke={1.8} />
           </ActionIcon>
         </Tooltip>
       </Popover.Target>
@@ -126,7 +139,7 @@ function SaveScene({ names, onSave }) {
   )
 }
 
-function SceneRow({ scene, names, onLoad, onRename, onDelete }) {
+function SceneRow({ scene, names, menuOpen, onLoad, onRename, onDelete }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(scene.name)
   const [confirm, setConfirm] = useState(false)
@@ -162,7 +175,8 @@ function SceneRow({ scene, names, onLoad, onRename, onDelete }) {
         data-ctl="scene-load" title={scene.camera ? `${scene.name} (with camera)` : scene.name}>
         {scene.name}
       </button>
-      <Menu position="bottom-end" withinPortal onClose={() => setConfirm(false)}>
+      <Menu position="bottom-end" withinPortal onOpen={() => { menuOpen.current = true }}
+        onClose={() => { menuOpen.current = false; setConfirm(false) }}>
         <Menu.Target>
           <ActionIcon variant="subtle" size="xs" color="gray" data-ctl="scene-menu"
             aria-label={`More for ${scene.name}`}>

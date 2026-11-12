@@ -487,13 +487,28 @@ def views_checks(page, scene, out):
     def filled(slot):
         return page.locator(ctl(f"cam-{slot}")).get_attribute("data-filled") == "true"
 
+    def open_scenes():
+        """Open the toolbar's scene list unless it is open; it fades, so let a
+        closing one finish before looking."""
+        page.wait_for_timeout(250)
+        if not page.locator(ctl("scenes-list")).is_visible():
+            page.click(ctl("scenes-open"))
+            page.wait_for_selector(ctl("scenes-list"), state="visible")
+
     def row(name):
+        open_scenes()
         return page.locator(f'[data-scene="{name}"]')
 
     def scene_names():
+        open_scenes()
         return page.locator("[data-scene]").evaluate_all("rs => rs.map(r => r.dataset.scene)")
 
+    def no_scenes():
+        open_scenes()
+        return page.locator(ctl("scenes-empty")).count() == 1
+
     def notice():
+        open_scenes()
         loc = page.locator(ctl("views-notice"))
         return loc.inner_text() if loc.count() else ""
 
@@ -567,7 +582,7 @@ def views_checks(page, scene, out):
     check("a second Save click ends save mode without storing", not filled("4"))
 
     # -- scenes
-    check("no saved scenes yet", page.locator(ctl("scenes-empty")).count() == 1)
+    check("no saved scenes yet", no_scenes())
     step_time("ArrowLeft")
     page.click(ctl("field"))
     page.get_by_role("option", name="p_rgh", exact=True).click()
@@ -667,7 +682,7 @@ def views_checks(page, scene, out):
     wait_for_render(page)
     wait_idle(page, scene)
     check("views are per case",
-          page.locator(ctl("scenes-empty")).count() == 1 and not filled("1"))
+          no_scenes() and not filled("1"))
 
     # -- import onto the other case
     save_scene("Slice")
@@ -754,7 +769,9 @@ def main():
                 ("preset", "top bar: colour map"), ("auto-range", "top bar: auto range"),
                 ("rescale", "top bar: rescale"), ("options", "top bar: options"),
                 ("screenshot", "top bar: screenshot"),
-                ("case", "side pane: case"),
+                ("all-cases", "toolbar: cases"),
+                ("case-title", "toolbar: case title"),
+                ("scenes-open", "toolbar: scenes"),
                 ("tool-cutplane", "tool stack: cut plane"),
                 ("tool-boundary", "tool stack: boundary"),
                 ("tool-contour", "tool stack: isosurfaces"),

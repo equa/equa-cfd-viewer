@@ -1,11 +1,12 @@
 import {
-  ActionIcon, Button, Divider, Group, Popover, Select, Switch, Text, Tooltip,
+  ActionIcon, Anchor, Button, Divider, Group, Popover, Select, Switch, Text, Tooltip,
 } from '@mantine/core'
 import {
   IconAdjustments, IconArrowsHorizontal, IconCamera,
 } from '@tabler/icons-react'
 import { COMPONENTS } from '../scene/state.js'
 import { Head, NumberField, SELECT, Tag, stepFor, useDeferred } from './controls.jsx'
+import { Scenes } from './Scenes.jsx'
 
 /*
  * The top bar: global colour settings, because they affect every part.
@@ -26,6 +27,7 @@ import { Head, NumberField, SELECT, Tag, stepFor, useDeferred } from './controls
 
 export function TopBar({
   meta, request, setRequest, appearance, setAppearance, onRescale, onScreenshot,
+  onShowCases, scenes,
 }) {
   // The patch field goes last: it colours the boundary only.
   const fields = meta
@@ -46,7 +48,20 @@ export function TopBar({
 
   return (
     <Group className="topbar" gap="xs" wrap="nowrap">
-      <Text fw={700} size="sm" className="brand">FoamViz</Text>
+      {/* As the cockpit's breadcrumb; Cases opens the start screen over the case. */}
+      <Group className="crumbs" gap={6} wrap="nowrap">
+        <Anchor component="button" type="button" size="sm" c="dimmed" onClick={onShowCases}
+          data-ctl="all-cases">
+          Cases
+        </Anchor>
+        <Text size="sm" c="dimmed">/</Text>
+        <Text size="sm" fw={700} className="crumbs-current" data-ctl="case-title">
+          {meta ? (meta.caseLabel ?? meta.case) : '…'}
+        </Text>
+        {meta && meta.caseLabel && meta.caseLabel !== meta.case && (
+          <Text size="xs" c="dimmed" ff="monospace" title={meta.case}>{shortId(meta.case)}</Text>
+        )}
+      </Group>
       <Divider orientation="vertical" />
 
       <Select
@@ -198,9 +213,14 @@ export function TopBar({
       <div style={{ flex: 1 }} />
 
       <Text size="xs" c="dimmed" className="case-note">
-        {meta ? `${meta.case} · ${meta.cells.toLocaleString()} cells` : 'loading…'}
+        {meta
+          ? `${meta.cells.toLocaleString()} cells · ${meta.times.length} time step${meta.times.length === 1 ? '' : 's'}`
+          : 'loading…'}
         {meta?.decomposed ? ' · decomposed' : ''}
       </Text>
+      <Divider orientation="vertical" />
+      {meta && <Scenes {...scenes} />}
+      <Divider orientation="vertical" />
       <Tooltip label="Save a PNG of the 3D view" openDelay={600}>
         <ActionIcon variant="subtle" size="md" onClick={onScreenshot} data-ctl="screenshot">
           <IconCamera size={17} stroke={1.6} />
@@ -209,3 +229,6 @@ export function TopBar({
     </Group>
   )
 }
+
+// As the cockpit shows a case id: head and tail of a long one.
+const shortId = (id) => (id.length > 16 ? `${id.slice(0, 8)}…${id.slice(-5)}` : id)

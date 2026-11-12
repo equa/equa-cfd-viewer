@@ -50,7 +50,6 @@ body {
   overflow: hidden;          /* a narrow window must not push the layout wider */
 }
 
-.topbar .brand { letter-spacing: .01em; white-space: nowrap; }
 .topbar .case-note { white-space: nowrap; }
 
 /* ── body: side pane + stage ─────────────────────────────── */
@@ -69,6 +68,28 @@ body {
   background: var(--mantine-color-body);
   overflow-y: auto;
 }
+
+/* Sections as the cockpit's settings sections: space above, small capitals over a rule. */
+.section { margin: 0 0 18px; }
+.section[hidden] { display: none; }
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  font-size: 11.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--mantine-color-dimmed);
+}
+
+.crumbs { flex: 0 1 auto; min-width: 0; }
+.crumbs-current { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── tool stack ──────────────────────────────────────────── */
 
@@ -109,7 +130,6 @@ body {
   opacity: .75;
 }
 
-.toolpanel[hidden] { display: none; }
 
 /* ── stage ───────────────────────────────────────────────── */
 

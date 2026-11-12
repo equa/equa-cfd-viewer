@@ -115,7 +115,7 @@ export function CutPlaneTool({ meta, request, setRequest, style, setStyle, plane
         Apply
       </Button>
 
-      <Divider my="sm" />
+      <Divider mt="md" mb="sm" />
       {/* With the mesh on, the slice becomes a crinkle slice: the whole cells
           the plane passes through, i.e. the true mesh, not a flat cut. That is a
           different extraction, so it stays a server control. */}
@@ -160,7 +160,7 @@ export function BoundaryTool({ meta, request, setRequest, style, setStyle }) {
         data-ctl="surface-clip"
       />
 
-      <Divider my="sm" />
+      <Divider mt="md" mb="sm" />
       {/* Reading fewer patches is the cheapest way to shrink the boundary, which
           dominates the wire (15 of s2's 16.2 MB raw). Deferred behind Apply
           because it forces a reload of the case, not just a re-extraction. */}
@@ -372,7 +372,7 @@ export function StreamTool({
         Re-seed at cut plane
       </Button>
 
-      <Divider my="sm" />
+      <Divider mt="md" mb="sm" />
 
       {/*
         Tubes are built in the BROWSER from the same lines the server already
@@ -404,7 +404,7 @@ export function StreamTool({
         />
       ) : null}
 
-      <Divider my="sm" />
+      <Divider mt="md" mb="sm" />
 
       {/*
         Animation. Entirely client-side -- an animated dash pattern over the
