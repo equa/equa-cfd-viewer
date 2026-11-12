@@ -529,6 +529,31 @@ export default function App() {
         onScreenshot={onScreenshot}
       />
       <div className="body">
+        <div className="stage" ref={stageRef}>
+          <Hud info={info} stats={stats} />
+          <Legend
+            lut={lut}
+            range={shownRange}
+            bands={shownBands}
+            ids={patchMode}
+            title={legendTitle}
+          />
+          <BottomBar
+            meta={meta}
+            request={req}
+            setRequest={setRequest}
+            onView={onView}
+            onRefreshTimes={onRefreshTimes}
+            cameras={views.cameras}
+            onLoadCamera={onLoadCamera}
+            onStoreCamera={onStoreCamera}
+          />
+          <Busy
+            show={!start.show && (opening || busy || !request)}
+            label={opening ? 'Opening case…' : 'Extracting…'}
+            error={start.show ? null : error}
+          />
+        </div>
         <SidePane
           meta={meta}
           entries={entries}
@@ -556,31 +581,6 @@ export default function App() {
           onExportViews={onExportViews}
           onImportViews={onImportViews}
         />
-        <div className="stage" ref={stageRef}>
-          <Hud info={info} stats={stats} />
-          <Legend
-            lut={lut}
-            range={shownRange}
-            bands={shownBands}
-            ids={patchMode}
-            title={legendTitle}
-          />
-          <BottomBar
-            meta={meta}
-            request={req}
-            setRequest={setRequest}
-            onView={onView}
-            onRefreshTimes={onRefreshTimes}
-            cameras={views.cameras}
-            onLoadCamera={onLoadCamera}
-            onStoreCamera={onStoreCamera}
-          />
-          <Busy
-            show={!start.show && (opening || busy || !request)}
-            label={opening ? 'Opening case…' : 'Extracting…'}
-            error={start.show ? null : error}
-          />
-        </div>
       </div>
       {start.show && (
         <StartScreen

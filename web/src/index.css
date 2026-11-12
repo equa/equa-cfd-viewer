@@ -8,9 +8,12 @@
  * used with Vuetify's theme vars.
  */
 
+/* Frame sizes match the cfd-backend cockpit (its docs/design/cockpit-layout.md),
+   so this toolbar, stage and side pane can stand in for the cockpit's. */
 :root {
-  --pane-width: 320px;
-  --topbar-height: 46px;
+  --pane-width: 300px;
+  --topbar-height: 56px;
+  --page-edge: 24px;
   --stage-dark: #16181d;
   --stage-light: #f2f3f5;
 }
@@ -41,7 +44,7 @@ body {
 
 .topbar {
   flex: 0 0 var(--topbar-height);
-  padding: 0 10px;
+  padding: 0 var(--page-edge);
   border-bottom: 1px solid var(--mantine-color-default-border);
   background: var(--mantine-color-body);
   overflow: hidden;          /* a narrow window must not push the layout wider */
@@ -61,8 +64,8 @@ body {
 .sidepane {
   flex: 0 0 var(--pane-width);
   width: var(--pane-width);
-  padding: 10px;
-  border-right: 1px solid var(--mantine-color-default-border);
+  padding: 14px 18px 16px;
+  border-left: 1px solid var(--mantine-color-default-border);
   background: var(--mantine-color-body);
   overflow-y: auto;
 }
@@ -280,7 +283,7 @@ body {
 
 .start-head {
   flex: 0 0 var(--topbar-height);
-  padding: 0 10px;
+  padding: 0 var(--page-edge);
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
