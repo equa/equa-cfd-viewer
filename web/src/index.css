@@ -137,12 +137,15 @@ body {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
   background: var(--stage-dark);
 }
 
 [data-theme='light'] .stage { background: var(--stage-light); }
 
-.stage canvas { display: block; }
+/* The renderer leaves the canvas style alone (setSize updateStyle=false), so
+   CSS sizes it; otherwise it shows at buffer size, w x devicePixelRatio. */
+.stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 
 /* ── HUD ─────────────────────────────────────────────────── */
 
