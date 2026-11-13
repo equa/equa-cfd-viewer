@@ -1,3 +1,9 @@
+## [1.0.0-beta.23](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.22...v1.0.0-beta.23) (2026-11-13)
+
+### Bug Fixes
+
+* **viz:** size the canvas by CSS so it stays out of the side pane ([4d8d2fa](https://github.com/equa/equa-cfd-viewer/commit/4d8d2fa4ce01e6798240bdeb0e4eca39d1e4e9a7))
+
 ## [1.0.0-beta.22](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.21...v1.0.0-beta.22) (2026-11-12)
 
 ### Features
