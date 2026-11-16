@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.28
+# syntax=docker/dockerfile:1.29
 #
 # cfd-viewer's own image: the server in `server` mode, the client inside its
 # wheel. Shaped like the equa-ci service archetype's Dockerfile (web, builder,
@@ -21,7 +21,7 @@
 
 ARG PYTHON_IMAGE=python:3.14-slim-trixie
 ARG NODE_IMAGE=node:26-slim
-ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.7
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.8
 
 # ── web ──────────────────────────────────────────────────────────────────────
 # The client. Public npm only; no token reaches this build.
