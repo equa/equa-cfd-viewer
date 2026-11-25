@@ -117,7 +117,11 @@ export function initialAppearance(theme) {
       },
       geometry: { opacity: 1, width: 1 },
     },
-    lighting: { ambient: 0.3, diffuse: 0.7, lightKit: true },
+    lighting: {
+      ambient: 0.3, diffuse: 0.7, lightKit: true,
+      present: false, roughness: 0.35, specular: 1, ao: true, env: 'room', envIntensity: 0.6,
+    },
+    grid: true,
     // Streamline comets. In `appearance`, not `request`, because the whole
     // animation is a shader uniform -- it costs no extraction and no fetch.
     // Off by default: it is a reading aid you reach for, and a moving picture

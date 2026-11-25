@@ -7,6 +7,13 @@ import { ViewHelper } from 'three/examples/jsm/helpers/ViewHelper.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { FRAG, FRAG_LINE, VERT, VERT_GLYPH, VERT_LINE } from './shaders.js'
 import { buildTubeGeometry } from './tube.js'
+import { makeGroundGrid } from './groundGrid.js'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { Pass } from 'three/examples/jsm/postprocessing/Pass.js'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 /*
  * The pixels. Everything above this file is React and knows no three.js;
@@ -105,6 +112,8 @@ export class Viewer {
       uCometPeriod: { value: 0.4 },
       uCometTail: { value: 12 },
       uCometDim: { value: 0.16 },
+      ...this._roomEnvironment(),
+      uNormalOut: { value: 0 },
     }
     // travel-units per second. One unit is the median streamline's whole
     // transport time, so ~0.35 crosses a typical line in about three seconds.
@@ -114,7 +123,14 @@ export class Viewer {
     this.tubes = { on: false, radius: 0.02, sides: 8 }
     this._streamLines = null   // the decoded LINE part, kept so tubes can be
                                // rebuilt without another fetch
-    this.lighting = { ambient: 0.35, diffuse: 0.65, lightKit: true }
+    this.lighting = {
+      ambient: 0.35, diffuse: 0.65, lightKit: true,
+      present: false, roughness: 0.35, specular: 1, ao: true, env: 'room', envIntensity: 0.6,
+    }
+    this._applyEnv()
+    this.grid = makeGroundGrid()
+    this.scene.add(this.grid)
+    this._buildComposer()
     this.meshes = new Map()      // part name -> Mesh | LineSegments
     this.edges = new Map()       // part name -> LineSegments of mesh edges
     this.styles = new Map()      // part name -> { opacity, cull, ... }
@@ -150,6 +166,8 @@ export class Viewer {
     const { clientWidth: w, clientHeight: h } = this.container
     if (!w || !h) return
     this.renderer.setSize(w, h, false)
+    this.composer?.setPixelRatio(this.renderer.getPixelRatio())
+    this.composer?.setSize(w, h)
     for (const mesh of this.meshes.values()) {
       if (mesh.material.isLineMaterial) mesh.material.resolution.set(w, h)
     }
@@ -194,6 +212,9 @@ export class Viewer {
       uOpacityMap: { value: 0 },
       uAmbient: { value: unlit ? 1 : this.lighting.ambient },
       uDiffuse: { value: unlit ? 0 : this._diffuse() },
+      uPresent: { value: !unlit && this.lighting.present ? 1 : 0 },
+      uRoughness: { value: this.lighting.roughness },
+      uSpecular: { value: this.lighting.specular },
       // Per material, not shared: only the streamlines animate. Everything
       // else keeps it at 0, where the shader is an exact no-op.
       uComets: { value: 0 },
@@ -593,18 +614,199 @@ export class Viewer {
     this.lut.needsUpdate = true
   }
 
-  setLighting({ ambient, diffuse, lightKit }) {
-    this.lighting = {
-      ambient: ambient ?? this.lighting.ambient,
-      diffuse: diffuse ?? this.lighting.diffuse,
-      lightKit: lightKit ?? this.lighting.lightKit,
-    }
+  setLighting(lighting) {
+    this.lighting = { ...this.lighting, ...lighting }
+    this._applyEnv()
     for (const [name, mesh] of this.meshes) {
       const u = mesh.material.uniforms
       if (!u?.uAmbient) continue
       if (name === 'slice') continue  // stays unlit -- see _material()
       u.uAmbient.value = this.lighting.ambient
       u.uDiffuse.value = this._diffuse()
+      if (u.uPresent) {
+        u.uPresent.value = this.lighting.present ? 1 : 0
+        u.uRoughness.value = this.lighting.roughness
+        u.uSpecular.value = this.lighting.specular
+      }
+    }
+  }
+
+  _roomEnvironment() {
+    const pmrem = new THREE.PMREMGenerator(this.renderer)
+    const texture = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    pmrem.dispose()
+    const lod = Math.max((texture.mipmaps?.length ?? 1) - 1, 0)
+    return {
+      uEnvMap: { value: texture },
+      uEnvLod: { value: lod },
+      uEnvMix: { value: 1 },
+      uEnvIntensity: { value: 0.6 },
+    }
+  }
+
+  _applyEnv() {
+    this.shared.uEnvMix.value = this.lighting.env === 'room' ? 1 : 0
+    this.shared.uEnvIntensity.value = this.lighting.envIntensity
+  }
+
+  setGrid(on) { this.grid.visible = !!on }
+
+  /* Ambient occlusion for presentation mode. GTAO's normal pass would draw
+   * fat lines, glyph instances, see-through parts and the grid as solid
+   * garbage, so those are hidden for that pass only. */
+  _buildComposer() {
+    this.composer = new EffectComposer(this.renderer)
+    const surfaces = new RenderPass(this.scene, this.camera)
+    const drawSurfaces = surfaces.render.bind(surfaces)
+    surfaces.render = (...args) => this._withOnly((o) => !this._isOverlay(o), () => drawSurfaces(...args))
+    this.composer.addPass(surfaces)
+    this.gtao = new GTAOPass(this.scene, this.camera, 1, 1)
+    this.gtao.blendIntensity = 1
+    const normalPass = this.gtao._renderOverride.bind(this.gtao)
+    const normalMats = new Map()
+    const normalFor = (side) => {
+      if (!normalMats.has(side)) {
+        normalMats.set(side, Object.assign(this.gtao.normalMaterial.clone(), { side }))
+      }
+      return normalMats.get(side)
+    }
+    const lineNormals = new WeakMap()
+    const lineNormal = (m) => {
+      if (!lineNormals.has(m)) {
+        const c = m.clone()
+        c.color.setRGB(0.5, 0.5, 1)
+        c.vertexColors = false
+        c.transparent = false
+        c.opacity = 1
+        lineNormals.set(m, c)
+      }
+      const c = lineNormals.get(m)
+      c.linewidth = m.linewidth
+      c.resolution.copy(m.resolution)
+      return c
+    }
+    this.gtao._renderOverride = (renderer, override, ...rest) => {
+      if (override !== this.gtao.normalMaterial) return normalPass(renderer, override, ...rest)
+      // Our own shaders write their normal (uNormalOut), so tubes keep their
+      // displacement and glyphs their instancing, and occlude where drawn.
+      // Other meshes swap in a normal material with their own side (a culled
+      // boundary draws back faces only); the grid and see-through parts sit out.
+      // Streamlines, arrows and lines are included, so they cast contact
+      // shadows: a first try that may be too much. To stop it, hide
+      // `this._isOverlay(o)` here too; _overlayPass keeps them undarkened anyway.
+      const hidden = []
+      const swapped = []
+      this.scene.traverse((o) => {
+        if (!o.visible || o === this.scene || o.isGroup) return
+        const opaque = (o.material?.uniforms?.uOpacity?.value ?? o.material?.opacity ?? 1) >= 0.99
+        if (o === this.grid || !opaque) {
+          o.visible = false
+          hidden.push(o)
+        } else if (o.material.uniforms?.uNormalOut) {
+          // drawn as is
+        } else if (o.material.isLineMaterial) {
+          swapped.push([o, o.material])
+          o.material = lineNormal(o.material)
+        } else if (o.isMesh && !o.geometry?.isInstancedBufferGeometry) {
+          swapped.push([o, o.material])
+          o.material = normalFor(o.material.side)
+        } else {
+          o.visible = false
+          hidden.push(o)
+        }
+      })
+      this.shared.uNormalOut.value = 1
+      const [target, clearColor, clearAlpha] = rest
+      const color = renderer.getClearColor(new THREE.Color())
+      const alpha = renderer.getClearAlpha()
+      const autoClear = renderer.autoClear
+      renderer.setRenderTarget(target)
+      renderer.autoClear = false
+      renderer.setClearColor(clearColor)
+      renderer.setClearAlpha(clearAlpha || 0)
+      renderer.clear()
+      renderer.render(this.scene, this.camera)
+      renderer.autoClear = autoClear
+      renderer.setClearColor(color)
+      renderer.setClearAlpha(alpha)
+      this.shared.uNormalOut.value = 0
+      for (const o of hidden) o.visible = true
+      for (const [o, m] of swapped) o.material = m
+    }
+    this.composer.addPass(this.gtao)
+    this.composer.addPass(this._overlayPass())
+    this.composer.addPass(new OutputPass())
+  }
+
+  /* Lines, streamlines and arrows: they cast occlusion onto the surfaces but
+   * are drawn after it, so it never darkens them. */
+  _isOverlay(o) {
+    if (o.isLine || o.isLineSegments || o.isLineSegments2) return true
+    for (const name of ['stream', 'glyph']) {
+      if (this.meshes.get(name) === o) return true
+    }
+    return false
+  }
+
+  /* Hides every drawable that `keep` rejects while `draw` runs. */
+  _withOnly(keep, draw) {
+    const hidden = []
+    this.scene.traverse((o) => {
+      if (o.visible && o !== this.scene && !o.isGroup && !keep(o)) {
+        o.visible = false
+        hidden.push(o)
+      }
+    })
+    try { draw() } finally { for (const o of hidden) o.visible = true }
+  }
+
+  /* The occluded image has no depth, so the opaque surfaces are laid down
+   * again depth-only before the overlays draw onto it. */
+  _overlayPass() {
+    const depthOnly = new Map()
+    const depthFor = (side) => {
+      if (!depthOnly.has(side)) depthOnly.set(side, new THREE.MeshBasicMaterial({ colorWrite: false, side }))
+      return depthOnly.get(side)
+    }
+    const pass = new Pass()
+    pass.needsSwap = false
+    pass.render = (renderer, writeBuffer, readBuffer) => {
+      const background = this.scene.background
+      const autoClear = renderer.autoClear
+      this.scene.background = null
+      renderer.autoClear = false
+      renderer.setRenderTarget(readBuffer)
+      renderer.clearDepth()
+      const swapped = []
+      this._withOnly((o) => o.isMesh && !this._isOverlay(o) && o !== this.grid
+        && (o.material?.uniforms?.uOpacity?.value ?? 1) >= 0.99, () => {
+        this.scene.traverse((o) => {
+          if (!o.visible || !o.isMesh || o === this.scene) return
+          swapped.push([o, o.material])
+          o.material = depthFor(o.material.side)
+        })
+        renderer.render(this.scene, this.camera)
+        for (const [o, m] of swapped) o.material = m
+      })
+      this._withOnly((o) => this._isOverlay(o), () => renderer.render(this.scene, this.camera))
+      renderer.autoClear = autoClear
+      this.scene.background = background
+    }
+    return pass
+  }
+
+  /* GTAO reads depth, so near/far must hug the case: the default 0.01..1e6
+   * leaves no depth precision at room scale. */
+  _fitClip() {
+    const [x0, x1, y0, y1, z0, z1] = this.bounds || [0, 1, 0, 1, 0, 1]
+    const diag = Math.hypot(x1 - x0, y1 - y0, z1 - z0) || 1
+    const far = Math.max(diag * 20, 200)
+    const near = diag * 0.002
+    if (this.camera.far !== far || this.camera.near !== near) {
+      this.camera.near = near
+      this.camera.far = far
+      this.camera.updateProjectionMatrix()
+      this.gtao.updateGtaoMaterial({ radius: diag * 0.3, distanceExponent: 2, thickness: diag * 0.1, scale: 1.5 })
     }
   }
 
@@ -614,6 +816,8 @@ export class Viewer {
   setTheme(light) {
     this.light = !!light
     this.scene.background = new THREE.Color(light ? 0xf2f3f5 : 0x16181d)
+    // @equa/ui's --border and --muted-foreground, as SceneGrid uses.
+    this.grid.userData.setColors(light ? 0xd8dadf : 0x2d2f34, light ? 0x737373 : 0xa1a1a1)
     for (const [name, mesh] of this.meshes) {
       if ((!mesh.material.uniforms || mesh.material.isLineMaterial) && mesh.material.color) {
         mesh.material.color.setHex(this._neutralColour())
@@ -770,7 +974,13 @@ export class Viewer {
    * colour buffer survives the present, so this is reliable rather than
    * driver-dependent. */
   _draw() {
-    this.renderer.render(this.scene, this.camera)
+    this.grid.userData.follow(this.camera)
+    if (this.lighting.present && this.lighting.ao) {
+      this._fitClip()
+      this.composer.render()
+    } else {
+      this.renderer.render(this.scene, this.camera)
+    }
     // Copied before the gizmo's render resets the renderer's counts.
     const { triangles, calls } = this.renderer.info.render
     this.drawn = { triangles, calls }
