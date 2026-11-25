@@ -421,8 +421,14 @@ def zip_checks(browser, out):
                   "evil.txt" in page.inner_text(ctl("case-notice")),
                   page.inner_text(ctl("case-notice")))
 
+            case2_scenes = []
+            page.on("request", lambda r: case2_scenes.append(r.url)
+                    if "api/scene" in r.url else None)
             page.locator(ctl("case-row"), has_text="case-2").first.click()
             page.wait_for_selector(ctl("start-screen"), state="detached", timeout=60_000)
+            # The previous case's picture is still in the scene until case-2's
+            # parts arrive, so a render alone does not mean the open is done.
+            wait_idle(page, case2_scenes)
             colours, _ = wait_for_render(page)
             check("a decomposed zip opens", colours >= 40, f"{colours} colours")
 
