@@ -1,3 +1,9 @@
+## [1.0.0-beta.24](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.23...v1.0.0-beta.24) (2026-11-25)
+
+### Features
+
+* **viz:** presentation lighting and a ground grid at z=0 ([efe2457](https://github.com/equa/equa-cfd-viewer/commit/efe24570a99740f1130532347c4a36dbce8bff1d))
+
 ## [1.0.0-beta.23](https://github.com/equa/equa-cfd-viewer/compare/v1.0.0-beta.22...v1.0.0-beta.23) (2026-11-13)
 
 ### Bug Fixes
