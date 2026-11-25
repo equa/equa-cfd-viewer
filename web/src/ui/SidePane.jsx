@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActionIcon, Collapse, Group, Text, Tooltip } from '@mantine/core'
+import { ActionIcon, Collapse, Group, SegmentedControl, Switch, Text, Tooltip } from '@mantine/core'
 import {
   IconArrowUpRight, IconBlur, IconBulb, IconChevronDown, IconChevronRight, IconCube, IconEye,
   IconEyeOff, IconHome, IconSquare, IconVector,
@@ -167,6 +167,46 @@ export function SidePane({
               })}
               data-ctl="light-diffuse"
             />
+            <Switch size="xs" mt={8} label="Presentation"
+              checked={appearance.lighting.present}
+              onChange={(e) => setAppearance({
+                lighting: { ...appearance.lighting, present: e.currentTarget.checked },
+              })}
+              data-ctl="light-present"
+            />
+            {appearance.lighting.present ? (
+              <>
+                <LabelledSlider label="Roughness" min={0.05} max={1} step={0.05} live
+                  value={appearance.lighting.roughness}
+                  onChange={(v) => setAppearance({ lighting: { ...appearance.lighting, roughness: v } })}
+                  data-ctl="light-roughness" />
+                <LabelledSlider label="Gloss" min={0} max={2} step={0.1} live
+                  value={appearance.lighting.specular}
+                  onChange={(v) => setAppearance({ lighting: { ...appearance.lighting, specular: v } })}
+                  data-ctl="light-specular" />
+                <SegmentedControl size="xs" fullWidth mt={6}
+                  data={[{ label: 'Room', value: 'room' }, { label: 'Studio', value: 'studio' }]}
+                  value={appearance.lighting.env ?? 'room'}
+                  onChange={(v) => setAppearance({ lighting: { ...appearance.lighting, env: v } })}
+                  data-ctl="light-env" />
+                {(appearance.lighting.env ?? 'room') === 'room' ? (
+                  <LabelledSlider label="Environment" min={0} max={2} step={0.1} live
+                    value={appearance.lighting.envIntensity ?? 0.6}
+                    onChange={(v) => setAppearance({ lighting: { ...appearance.lighting, envIntensity: v } })}
+                    data-ctl="light-env-intensity" />
+                ) : null}
+                <Switch size="xs" mt={6} label="Ambient occlusion"
+                  checked={appearance.lighting.ao}
+                  onChange={(e) => setAppearance({
+                    lighting: { ...appearance.lighting, ao: e.currentTarget.checked },
+                  })}
+                  data-ctl="light-ao" />
+              </>
+            ) : null}
+            <Switch size="xs" mt={8} label="Ground grid"
+              checked={appearance.grid ?? true}
+              onChange={(e) => setAppearance({ grid: e.currentTarget.checked })}
+              data-ctl="ground-grid" />
         </Collapse>
       </section>
     </div>

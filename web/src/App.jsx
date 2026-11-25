@@ -97,6 +97,8 @@ export default function App() {
       // Lets a test (or a tuning sweep) drive the animation's shape directly,
       // including the two knobs the UI keeps fixed at their tuned defaults.
       tuneComets: (o) => viewer.setComets(o),
+      lighting: (o) => viewer.setLighting(o),
+      aoOutput: (n) => { viewer.gtao.output = n },
       partInfo: (name) => viewer.partInfo(name),
       streamSpans: () => viewer.streamSpans(),
       state: () => stateRef.current,
@@ -244,6 +246,8 @@ export default function App() {
   }, [appearance.visible])
 
   useEffect(() => { viewerRef.current?.setLighting(appearance.lighting) }, [appearance.lighting])
+
+  useEffect(() => { viewerRef.current?.setGrid(appearance.grid ?? true) }, [appearance.grid])
 
   useEffect(() => { viewerRef.current?.setComets(appearance.comets) }, [appearance.comets])
 
