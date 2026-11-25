@@ -148,7 +148,27 @@ export class Viewer {
     this._resize()
     this._observer = new ResizeObserver(() => this._resize())
     this._observer.observe(container)
+    this._redrawOnCalls()
     this._tick()
+  }
+
+  /* Render on demand: a frame is drawn only when the picture can have
+   * changed. Every state change goes through a public method, so each call
+   * marks the view dirty; read-only ones are listed to keep it idle. */
+  _redrawOnCalls() {
+    const readOnly = new Set([
+      'constructor', 'dispose', 'stats', 'has', 'canAnimateStreams', 'grab', 'screenshot',
+      'comet_state', 'partInfo', 'streamSpans', 'camera_state',
+    ])
+    this._dirty = true
+    for (const name of Object.getOwnPropertyNames(Viewer.prototype)) {
+      if (name.startsWith('_') || readOnly.has(name)) continue
+      const call = this[name]
+      this[name] = (...args) => {
+        this._dirty = true
+        return call.apply(this, args)
+      }
+    }
   }
 
   dispose() {
@@ -173,6 +193,7 @@ export class Viewer {
     }
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
+    this._dirty = true
   }
 
   _tick() {
@@ -187,14 +208,18 @@ export class Viewer {
       const period = this.shared.uCometPeriod.value
       this.shared.uCometPhase.value = (this.shared.uCometPhase.value + dt * this.comets.speed) % period
     }
-    this.controls.update()
+    // update() reports motion, damping included.
+    const moved = this.controls.update()
+    if (!(moved || this.comets.on || this._dirty)) return
+    this._dirty = false
     this._draw()
+    // fps is the drawing rate: idle ticks count neither frames nor time.
     this.frames += 1
-    if (!this._t0) this._t0 = now
-    if (now - this._t0 >= 500) {
-      this.fps = Math.round((this.frames * 1000) / (now - this._t0))
+    this._busy = (this._busy ?? 0) + dt
+    if (this._busy >= 0.5) {
+      this.fps = Math.round(this.frames / this._busy)
       this.frames = 0
-      this._t0 = now
+      this._busy = 0
     }
   }
 
